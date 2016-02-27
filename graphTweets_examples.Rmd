@@ -1,0 +1,383 @@
+---
+title: "graphTweets - Examples"
+author: "John Coene"
+date: "March - 2016"
+output: 
+  revealjs::revealjs_presentation:
+    theme: blood
+    highlight: monochrome
+    center: true
+---
+
+```{r, echo=FALSE, eval=TRUE, include=FALSE, message=FALSE, error=FALSE, warning=FALSE, comment=NA}
+library(twitteR)
+library(graphTweets)
+library(igraph)
+library(magrittr)
+library(plotly)
+```
+
+```{r, echo=FALSE, eval=TRUE}
+presi <- get(load("data/presi.RData"))
+r_tw <- get(load("data/r_tw.RData"))
+```
+
+# Setup
+
+## Install
+
+graphTweets is available on CRAN and github.
+
+```{r, echo=TRUE, eval=FALSE}
+# from CRAN
+install.packages("graphTweets")
+
+# from github
+devtools::install_github("JohnCoene/graphTweets")
+
+# load
+library(graphTweets)
+```
+
+## Functions
+
+graphTweets only comes with *two* functions
+
+```{r, echo=TRUE, eval=FALSE}
+help(graphTweets)
+```
+
+## Data
+
+Set yourself up with [twitteR](https://cran.r-project.org/web/packages/twitteR/index.html) or [streamR](https://cran.r-project.org/web/packages/streamR/index.html) to fetch tweets (you may of course import data in some other way).
+
+Datasets used in these slides:
+
+* [rstats.RData]() - `r nrow(r_tw)` tweets on #rstats.
+* [presi.RData]() - `r nrow(presi)` tweets on the US Presidential 2016.
+
+# Example 01
+
+## search Twitter
+
+Here I use the tiwtteR package to get 500 tweets on "#rstats". 
+
+```{r, echo=TRUE, eval=FALSE}
+library(twitteR)
+
+#
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+r_tw <- searchTwitter("rstats", n = 500)
+
+# to data.frame
+r_tw <- twListToDF(r_tw)
+```
+
+[download]() this dataset.
+
+## get Edges
+
+We can now get the list of edges.
+
+```{r, echo=TRUE, eval=TRUE}
+# get edges
+edges <- getEdges(r_tw, "text", "screenName")
+
+# remove dupliactes
+edges <- edges[!duplicated(edges),]
+```
+
+## igraph build
+
+We may then use [igraph](http://igraph.org/r/) to build and plot the network. 
+
+```{r, echo=TRUE, eval=FALSE}
+library(igraph)
+
+# build
+g <- graph.data.frame(edges, directed = TRUE)
+
+# plot
+plot(g, layout = layout.fruchterman.reingold(g))
+```
+
+## igraph plot
+
+```{r, echo=FALSE, eval=TRUE}
+g <- graph.data.frame(edges, directed = TRUE)
+
+# plot
+par(bg="#262626", mar=c(1,1,1,1))
+plot(g, layout = layout.fruchterman.reingold(g), vertex.color = "#DD1C1A",
+     vertex.label.family = "sans",
+     vertex.label.color = hsv(h = 0, s = 0, v = 0, alpha = 0.0), 
+     vertex.size = log1p(degree(g)) * 2, edge.arrow.size = 0.2, 
+     edge.arrow.width = 0.3, edge.width = 1,
+     edge.color = hsv(h = 1, s = .59, v = .91, alpha = 0.7),
+     vertex.frame.color="#262626")
+```
+
+## networkD3
+
+You may also use the networkD3 package.
+
+```{r, echo=TRUE, eval=FALSE}
+networkD3::simpleNetwork(edges, Source = "source", Target = "target")
+```
+
+```{r, echo=FALSE, eval=TRUE}
+networkD3::simpleNetwork(edges, Source = "source", Target = "target",
+                         linkColour = "#262626", nodeColour = "#DD1C1A",
+                         nodeClickColour = "#262626", 
+                         textColour = "#580b0a") %>%
+  networkD3::saveNetwork(file = 'n3.html')
+```
+
+<iframe allowtransparency="true" style="background: #262626;" src="n3.html" frameborder="0" height="410" width="100%" frameborder="0">
+</iframe>
+
+## Export
+
+Alternatively one may use the igraph package to save the graph and import it in another software.
+
+For instance you may want to save the graph as `graphml`.
+
+```{r, echo=TRUE, eval=FALSE}
+write.graph(g, file = "graphTweets.graphml", format = "graphml")
+```
+
+Then open it in [Gephi](https://gephi.org/).
+
+# Example 02
+
+## build graph
+
+Let's use the same data set as in the previous example but this time add meta-data to the nodes.
+
+```{r, echo=TRUE, eval=FALSE}
+# graphTweets
+edges <- getEdges(r_tw, source = "screenName", tweets = "text", 
+                  str.length = NULL, "favoriteCount")
+nodes <- getNodes(edges, source = "source", target = "target", "favoriteCount")
+
+# replace NA with 0
+nodes$retweetCount[is.na(nodes$retweetCount)] <- 0
+
+# build graph
+g <- graph.data.frame(edges, directed = TRUE, vertices = nodes)
+```
+
+```{r, echo=FALSE, eval=TRUE}
+edges <- getEdges(r_tw, source = "screenName", tweets = "text", 
+                  str.length = NULL, "favoriteCount")
+edges$target <- as.character(edges$target)
+nodes <- getNodes(edges, source = "source", target = "target", "favoriteCount")
+
+nodes$favoriteCount[is.na(nodes$favoriteCount)] <- 0
+
+# build graph
+g <- graph.data.frame(edges, directed = TRUE, vertices = nodes)
+```
+
+## make plot
+
+Now we can use the meta-data (`favoriteCount`) in the plot.
+
+```{r, echo=FALSE, eval=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+V(g)$color <- colorRampPalette(RColorBrewer:::brewer.pal(9, "Reds"))(max(V(g)$favoriteCount))
+
+par(bg="#262626", mar=c(1,1,1,1))
+plot(g, layout = layout.fruchterman.reingold(g), vertex.color = V(g)$color,
+     vertex.label.family = "sans",
+     vertex.label.color = hsv(h = 0, s = 0, v = 0, alpha = 0.0), 
+     vertex.size = log1p(degree(g)) * 3, edge.arrow.size = 0.2, 
+     edge.arrow.width = 0.3, edge.width = 1,
+     edge.color = hsv(h = 1, s = .59, v = .91, alpha = 0.7),
+     vertex.frame.color="#262626")
+```
+
+## plot
+
+```{r, echo=FALSE, eval=TRUE, warning=FALSE, error=FALSE, message=FALSE}
+V(g)$color <- colorRampPalette(RColorBrewer:::brewer.pal(9, "Reds"))(max(V(g)$favoriteCount))
+
+par(bg="#262626", mar=c(1,1,1,1))
+plot(g, layout = layout.fruchterman.reingold(g), vertex.color = V(g)$color,
+     vertex.label.family = "sans",
+     vertex.label.color = hsv(h = 0, s = 0, v = 0, alpha = 0.0), 
+     vertex.size = log1p(degree(g)) * 3, edge.arrow.size = 0.2, 
+     edge.arrow.width = 0.3, edge.width = 1,
+     edge.color = hsv(h = 1, s = .59, v = .91, alpha = 0.7),
+     vertex.frame.color="#262626")
+```
+
+# Example 03
+
+## Get tweets
+
+This time we'll get tweets on the predidential race (writing this on `r Sys.Date()`)
+
+```{r, echo=TRUE, eval=FALSE}
+# search terms 2016 presidential
+st <- c("hillary", "clinton", "bernie", "sanders", "donald", "trump", "jeb", 
+        "bush", "ted", "cruz", "marco", "rubio", "carson")
+
+presi <- data.frame()
+
+for(i in 10:length(st)) {
+  # tweets from the US
+  tw <- searchTwitter(st[i], n = 5000, geocode = "39.554883,-99.931641,1000mi")
+  
+  tw <- twListToDF(tw)
+  
+  presi <- plyr::rbind.fill(presi, tw)
+}
+```
+
+[download]() this dataset.
+
+## get Edges
+
+This time we pass additional variables to the `getEdges` function; geo-coordinates.
+
+```{r, echo=TRUE, eval=TRUE}
+# remove NA
+presi <- presi[!is.na(presi$longitude),]
+
+edges <- getEdges(data = presi, tweets = "text", source = "screenName", 
+                  str.length = NULL, "longitude", "latitude", "retweetCount")
+```
+
+## get Nodes
+
+Now we can add geo-coordinates as meta-data to our vertices.
+
+```{r, echo=FALSE, eval=TRUE}
+edges$source <- as.character(paste(edges$source))
+edges$target <- as.character(paste(edges$target))
+```
+
+```{r, echo=TRUE, eval=TRUE}
+nodes <- getNodes(edges, source = names(edges)[1], target = names(edges)[2], 
+                  "longitude", "latitude", "retweetCount")
+```
+
+## build graph
+
+Here I demonstrate with plotly as igraph cannot properly handle `nrow(nodes)` nodes.
+
+```{r, echo=TRUE, eval=FALSE}
+# join nodes and edges
+edges <- dplyr::inner_join(edges[,1:2], nodes[,1:3],
+                           by = c("source" = "nodes"))
+edges <- dplyr::inner_join(edges, nodes[,1:3], by = c("target" = "nodes"))
+
+names(edges)[3:ncol(edges)] <- c("lon_start", "lat_start", "lon_end",
+                                 "lat_end")
+
+# remove unknown
+edges <- edges[!is.na(edges$lon_end),]
+
+# edges frequency
+edges$freq <- 1
+edges <- plyr::ddply(edges, c("source", "target", "lon_start", "lat_start", 
+                              "lon_end", "lat_end"),
+                     plyr::summarise, freq = sum(freq))
+
+# add id for plotly
+edges$id <- 1:nrow(edges)
+
+# plot
+
+# map projection
+geo <- list(
+  scope = 'north america',
+  projection = list(type = 'azimuthal equal area')
+)
+
+plot_ly(nodes, lon = longitude, lat = latitude, text = text, 
+        type = 'scattergeo', locationmode = 'USA-states',
+        marker = list(size = log1p(retweetCount * 3)*5, color = '#DD1C1A'),
+        inherit = FALSE, hoverinfo = text) %>%
+  add_trace(lon = list(lon_start, lon_end), lat = list(lat_start, lat_end),
+            group = id, opacity = 1, data = edges,
+            mode = 'lines', line = list(width = freq, color = '#DD1C1A'),
+            type = 'scattergeo', locationmode = 'USA-states') %>%
+  layout(title = 'graphTweets',
+         geo = geo, showlegend = FALSE)
+```
+
+## plot
+
+```{r, echo=FALSE, eval=TRUE}
+# join nodes and edges
+edges <- dplyr::inner_join(edges[,1:2], nodes[,1:3],
+                           by = c("source" = "nodes"))
+edges <- dplyr::inner_join(edges, nodes[,1:3], by = c("target" = "nodes"))
+
+names(edges)[3:ncol(edges)] <- c("lon_start", "lat_start", "lon_end",
+                                 "lat_end")
+
+# remove unknown
+edges <- edges[!is.na(edges$lon_end),]
+
+# edges frequency
+edges$freq <- 1
+edges <- plyr::ddply(edges, c("source", "target", "lon_start", "lat_start", 
+                              "lon_end", "lat_end"),
+                     plyr::summarise, freq = sum(freq))
+
+# add id
+edges$id <- 1:nrow(edges)
+
+for(i in 3:ncol(edges)){
+  edges[,i] <- as.numeric(paste(edges[,i]))
+}
+
+# map projection
+geo <- list(
+  scope = 'north america',
+  projection = list(type = 'azimuthal equal area'),
+  showland = TRUE,
+  landcolor = toRGB("gray75"),
+  countrycolor = toRGB("#262626"),
+  showocean = TRUE,
+  oceancolor = "#262626",
+  bgcolor = "#262626",
+  caostlinecolor = "#262626",
+  showsubunits = TRUE,
+  subunitscolor = "#262626",
+  showcountries = TRUE
+)
+
+# hover
+nodes$text <- paste0(iconv(nodes$nodes, to = "UTF-8"))
+
+# nodes retweet NA to 0
+nodes$retweetCount[is.na(nodes$retweetCount)] <- 0
+
+plot_ly(nodes, lon = longitude, lat = latitude, text = text, 
+        type = 'scattergeo', locationmode = 'USA-states',
+        marker = list(size = log1p(retweetCount * 3)*5, color = '#DD1C1A'),
+        inherit = FALSE, hoverinfo = text) %>%
+  add_trace(lon = list(lon_start, lon_end), lat = list(lat_start, lat_end),
+            group = id, opacity = 1, data = edges,
+            mode = 'lines', line = list(width = freq, color = '#DD1C1A'),
+            type = 'scattergeo', locationmode = 'USA-states') %>%
+  layout(title = '',
+         geo = geo, showlegend = FALSE, paper_bgcolor = "#262626", 
+         plot_bgcolor="#262626",
+         width = 1000, height = 520)
+```
+
+# Outro
+
+## Resources
+
+If you encounter issues go to, [Github issues](https://github.com/JohnCoene/graphTweets/issues).
+
+For the manual go on [CRAN](https://cran.r-project.org/web/packages/graphTweets/).
+
+See my other packages and projects at [http://johncoene.github.io/projects/](http://johncoene.github.io/projects/)
+
+# Thanks!
