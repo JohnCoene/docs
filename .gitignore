@@ -3,3 +3,6 @@
 .RData
 .httr-oauth
 docs.Rproj
+graphTweets.graphml
+tweets2earth.kml
+x.kml
