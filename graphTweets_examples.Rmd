@@ -418,9 +418,11 @@ plot(g, layout = layout.fruchterman.reingold(g), vertex.color = membership(cm),
 
 Temporal graphs are do-able within R but remain clunky; one has to plot a graph frame by frame and turn it into a gif.
 
+`graphTweets::dynamise` somewhat remedies to this.
+
 ## Dynamise
 
-graphTweets let's you build a temporal graph in R and easily export to/open it in [Gephi](https://gephi.org/); you only need tweets and `dynamise`. 
+graphTweets let's you build a temporal graph in R and easily export to/open it in [Gephi](https://gephi.org/) with `dynamise`. 
 
 ```{r, echo=TRUE, eval=FALSE}
 dyn <- dynamise(data = presi, tweets = "text", source = "screenName", 
@@ -429,16 +431,20 @@ dyn <- dynamise(data = presi, tweets = "text", source = "screenName",
 
 ## Return
 
-`dynamise` returns an object of class `graph` and though therefore can be plotted using `plot` it will not be dynamic. To take view the dynamic graph the network must be open in Gephi. Thankfully the function makes it extremely easy.
+`dynamise` returns an object of class `graph`, and, though therefore can be plotted using `plot`, it will not be dynamic. To take view the dynamic graph the network must be open in Gephi. 
+
+Thankfully the function makes it extremely easy.
 
 ## Open
 
-To view the graph in gephi write the file (see `?dynamise` for more options), you may additionally open it in Gephi from R itself with `open = TRUE`
+To view the graph in gephi save the file (`write = TRUE`), you may additionally open it in Gephi from R itself with `open = TRUE`
 
 ```{r, echo=TRUE, eval=FALSE}
 dyn <- dynamise(data = presi, tweets = "text", source = "screenName", 
                 start.stamp = "created", write = TRUE, open = TRUE)
 ```
+
+See `?dynamise` for more options
 
 ## In Gephi
 
@@ -450,7 +456,7 @@ In the data laboratory for both the "nodes" and "edges" merge the columns "start
 
 ![gephi.gif](https://github.com/JohnCoene/docs/raw/master/gephi.gif)
 
-In the following window check "parse dates", if you followed the steps in the previous slides in creating the graph and set `start.stamp = "created"` in `dynamise` use <b>yyyy-MM-dd HH:mm:ss</b> as date format (this is essentially `POSIXct`/`POSIXlt` class in R)
+In the following window check "parse dates", if you followed the steps in the previous slides in creating the graph and set `start.stamp = "created"` in `dynamise` use <b>yyyy-MM-dd HH:mm:ss</b> as date format.
 
 ## Timeline
 
