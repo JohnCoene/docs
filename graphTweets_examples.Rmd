@@ -42,10 +42,10 @@ library(graphTweets)
 
 ## Functions
 
-graphTweets only comes with *two* functions
+graphTweets only comes with *three* functions
 
 ```{r, echo=TRUE, eval=FALSE}
-help(graphTweets)
+package?graphTweets
 ```
 
 ## Data
@@ -411,6 +411,90 @@ plot(g, layout = layout.fruchterman.reingold(g), vertex.color = membership(cm),
      edge.color = hsv(h = 1, s = .59, v = .91, alpha = 0.7),
      vertex.frame.color="#262626")
 ```
+
+# Example 05
+
+## Temporal graph
+
+Temporal graphs are do-able within R but remain clunky; one has to plot a graph frame by frame and turn it into a gif.
+
+## Dynamise
+
+graphTweets let's you build a temporal graph in R and easily export to/open it in [Gephi](https://gephi.org/); you only need tweets and `dynamise`. 
+
+```{r, echo=TRUE, eval=FALSE}
+dyn <- dynamise(data = presi, tweets = "text", source = "screenName", 
+                start.stamp = "created")
+```
+
+## Return
+
+`dynamise` returns an object of class `graph` and though therefore can be plotted using `plot` it will not be dynamic. To take view the dynamic graph the network must be open in Gephi. Thankfully the function makes it extremely easy.
+
+## Open
+
+To view the graph in gephi write the file (see `?dynamise` for more options), you may additionally open it in Gephi from R itself with `open = TRUE`
+
+```{r, echo=TRUE, eval=FALSE}
+dyn <- dynamise(data = presi, tweets = "text", source = "screenName", 
+                start.stamp = "created", write = TRUE, open = TRUE)
+```
+
+## In Gephi
+
+To make the graph dynamic in Gephi a few more steps are required. The following slides essentially go through the steps detailed  [here](http://www.clementlevallois.net/gephi/tuto/gephi_tutorial_dynamics.pdf) on slides 25 and 26.
+
+## Merge columns
+
+In the data laboratory for both the "nodes" and "edges" merge the columns "start.stamp" and "end.stamp". Select "create time interval" in the dropdown.
+
+![gephi.gif](https://github.com/JohnCoene/docs/raw/master/gephi.gif)
+
+In the following window check "parse dates", if you followed the steps in the previous slides in creating the graph and set `start.stamp = "created"` in `dynamise` use <b>yyyy-MM-dd HH:mm:ss</b> as date format (this is essentially `POSIXct`/`POSIXlt` class in R)
+
+## Timeline
+
+You should now be able to "enable timeline" at the bottom of the screen. Then again, if you followed the steps in the previous slides in creating the graph then in the bottom left corner hit the gear icon and hit "set time format", change it to "Datetime".
+
+![gephi.gif](https://github.com/JohnCoene/docs/raw/master/timeformat.gif)
+
+<strong>That's it</strong>, mess around with the timeline.
+
+## Output
+
+![gephi.gif](https://github.com/JohnCoene/docs/raw/master/output.gif)
+
+# Example 06
+
+## edge lifetime
+
+By default `dynamise` keeps edges and nodes forever, which is unrealistic. Tweets do not last forever; use `end.stamp` to specify the delay.
+
+Since we pass in an array of class `POSIXct` we can specify a delay in seconds like so:
+
+```{r, echo=TRUE, eval=FALSE}
+# delay of an hour
+dyn <- dynamise(data = presi, tweets = "text", source = "screenName", 
+                start.stamp = "created", end.stamp = 3600, write = TRUE, 
+                open = TRUE)
+```
+
+The above will build a graph where tweets "last" one hour.
+
+## Date
+
+If we pass in a date we can specify a delay by day.
+
+```{r, echo = TRUE, eval=FALSE}
+presi$date <- as.Date(presi$created)
+
+# delay of an hour
+dyn <- dynamise(data = presi, tweets = "text", source = "screenName", 
+                start.stamp = "created", end.stamp = 1, write = TRUE, 
+                open = TRUE)
+```
+
+The above will build a graph where tweets "last" one day.
 
 # Outro
 
