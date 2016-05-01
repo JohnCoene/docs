@@ -1,0 +1,152 @@
+---
+title: "rodham"
+author: "John Coene"
+date: "30 April 2016"
+output:
+  revealjs::revealjs_presentation:
+    theme: solarized
+    highlight: pygments
+    center: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = ">")
+libs <- c("rodham", "igraph")
+lapply(libs, library, character.only = TRUE)
+```
+
+# network
+
+## setup
+
+The package includes meta-data about the emails.
+
+```{r}
+data("emails")
+```
+
+## Get edges
+
+With the dataset one can plot the network of emails using `edges_emails`.
+
+```{r}
+edges <- edges_emails(emails)
+```
+
+## plot network
+
+```{r, eval=FALSE}
+g <- igraph::graph.data.frame(edges, directed = TRUE); plot(g)
+```
+
+```{r, eval=TRUE, echo=FALSE, fig.height=5}
+g <- igraph::graph.data.frame(edges, directed = TRUE)
+par(bg="#fdf6e3", mar=c(1,1,1,1))
+plot(g, layout = layout.fruchterman.reingold(g), vertex.color = "#859900",
+     vertex.label.family = "sans",
+     vertex.label.color = hsv(h = 0, s = 0, v = 0, alpha = 0.0), 
+     vertex.size = log1p(degree(g)) * 3, edge.arrow.size = 0.2, 
+     edge.arrow.width = 0.3, edge.width = 1,
+     edge.color = "#93a1a1",
+     vertex.frame.color="#fdf6e3")
+```
+
+# Subject
+
+## Clean
+
+We can infer the topics of emails from the subject after we've done some cleaning.
+
+```{r}
+emails$subject <- tolower(emails$subject) # to lower case
+emails$subject <- trimws(emails$subject) # trim white space
+emails$subject <- gsub("[[:punct:]]", "", emails$subject) # remove punctation
+emails$subject <- gsub("[[:digit:]]", "", emails$subject) # remove numbers
+emails$subject <- tm::removeWords(emails$subject, 
+                                  c(tm::stopwords("english"),
+                                    "re", "fw")) # remove stopwords  
+```
+
+## Count
+
+Count term occurences.
+
+```{r}
+terms <- lapply(emails$subject, function(x){ 
+  unlist(strsplit(x, " "))
+})
+terms <- unlist(terms)
+terms <- subset(terms, terms != "")
+count <- plyr::count(terms)
+```
+
+## wordcloud
+
+```{r, eval=FALSE}
+wordcloud::wordcloud(count$x, count$freq, max.words = 100)
+```
+
+```{r, echo=FALSE, fig.height=5}
+par(bg="#fdf6e3", mar=c(1,1,1,1))
+wordcloud::wordcloud(count$x, count$freq, max.words = 100, 
+                     colors = c("#b58900", "#dc322f", "#6c71c4",
+                                "#268bd2", "#859900"))
+```
+
+## grep
+
+You can run `grep` to find out which emails refer to the terms in the wordcloud.
+
+```{r}
+# remmeber we converted to lower case
+head(emails$subject[grep("\\blibya\\b", emails$subject)])
+```
+
+# Content
+
+## xpdf
+
+The previous slides used the package dataset which does not contain the content of the emails. To get the content of the emails we are going to need a PDF extractor. You can download [xpdf](www.foolabs.com/xpdf/download.html) manually or use `get_extractor`
+
+```{r, eval=FALSE}
+# save extractor in working directory
+ext <- get_extractor(dest = "C:/")
+```
+
+The function returns the full path to `pdftotext.exe` to be used in the following slide.
+
+## get emails
+
+Now we can now get the emails. This may take some time. Zip files are downloaded, then unzipped and finally the content of each pdf (email) is extracted.
+
+```{r, eval=FALSE}
+emails_cuba <- get_emails(release = "Benghazi", save.dir = getwd(),
+                     extractor = ext)
+```
+
+The files are extracted in our working directory in a new folder named after the release.
+
+See `?get_emails` @details for other valid `release` values.
+
+## read
+
+```{r}
+files <- list.files("benghazi", pattern = ".txt") # list files
+length(files) # print number of emails
+head(files, 8)
+# read all emails
+content <- lapply(files, function(x){
+  readLines(paste0("benghazi/",x))
+})
+```
+
+## clean
+
+Now we need to clean the content of emails, which are quite dirty
+
+```{r}
+content <- sapply(content, function(x){
+  x[which(x != "")] # remove empty lines
+  })
+content[[1]]
+```
