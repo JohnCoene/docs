@@ -11,7 +11,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, comment = ">")
-libs <- c("rodham", "igraph")
+libs <- c("rodham", "igraph", "tm")
 lapply(libs, library, character.only = TRUE)
 ```
 
@@ -142,11 +142,32 @@ content <- lapply(files, function(x){
 
 ## clean
 
-Now we need to clean the content of emails, which are quite dirty
+Remove empty lines from the emails.
 
 ```{r}
 content <- sapply(content, function(x){
   x[which(x != "")] # remove empty lines
-  })
-content[[1]]
+})
+content <- lapply(content, function(x){
+  paste0(x, collapse = " ")
+})
+content[[1]] # inspect first email
 ```
+
+## TM
+
+We can use the [tm](https://cran.r-project.org/web/packages/tm/index.html) package to analyse the emails.
+
+```{r, eval=FALSE}
+library(tm)
+em <- Corpus(VectorSource(content))
+```
+
+## Clean
+
+```{r}
+em <- tm_map(em, content_transformer(tolower)) # to lower case
+em <- tm_map(em, removeWords, stopwords("english")) # remove stopwords
+em <- tm_map(em, removePunctuation) # remove stopwords
+```
+
