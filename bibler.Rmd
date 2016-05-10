@@ -1,0 +1,147 @@
+---
+title: "bibler"
+author: "John Coene"
+date: "9 May 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(bibler)
+library(plotly)
+library(tm)
+library(wordcloud)
+```
+
+## Overview
+
+Bibler includes 6 neat datasets about the Bible and the Apocrypha.
+
+### Bible
+
+* `king_james_df` The King James Bible as data.frame
+* `king_james_tm` The King James Bible as [tm](https://cran.r-project.org/package=tm) corpus (`c("VCorpus", "Corpus"`)
+* `king_james_books` List of books that constitute the King James Bible
+
+### Apocrypha
+
+* `apocrypha_df` The Apocrypha as data.frame
+* `apocrypha_tm` The Apocrypha as [tm](https://cran.r-project.org/package=tm) corpus (`c("VCorpus", "Corpus"`)
+* `apocrypha_books` List of books that constitute the Apocrypha
+
+## Install
+
+Install development version from [github](https://github.com/JohnCoene/bibler).
+
+```{r, eval=FALSE}
+devtools::install_github("JohnCoene/bibler")
+```
+
+## Text Mining
+
+### Term Frequency
+
+```{r}
+library(wordcloud)
+library(tm)
+data("king_james_tm") # load data
+# clean text
+wc <- tm_map(king_james_tm, tolower) # to lower case
+wc <- tm_map(wc, removeNumbers) # remove #
+wc <- tm_map(wc, removePunctuation) # remove punctuation
+data("middle_english_stopwords") # get middle english stopwords
+wc <- tm_map(wc, removeWords, c(stopwords("english"), middle_english_stopwords))
+wc <- tm_map(wc, PlainTextDocument)
+
+# count term frequency
+tdm <- TermDocumentMatrix(wc, control = list(minWordLength = 2))
+tdm <- removeSparseTerms(tdm, 0.99) 
+m <- as.matrix(tdm)
+terms <- sort(rowSums(m), decreasing = TRUE)
+dat <- data.frame(word = names(terms), freq = terms)
+
+# wordcloud
+wordcloud(words = dat$word, scale = c(4, .3), freq = dat$freq, max.words = 100,
+          rot.per = 0.25, colors = brewer.pal(8, "Accent"))
+```
+
+### Sentiment Analysis
+
+We can analyse the sentiment of the bible using the [syuzhet](https://cran.r-project.org/web/packages/syuzhet/index.html) package. There are different `methods` available, the default `syuzhet` seems more appropriate given that its dictionnaries were extracted from fictional novels.
+
+```{r}
+# base Bing Liu lexicons
+neg <- readLines("negative-words.txt")
+neg <- pos[36:length(neg)]
+pos <- readLines("positive-words.txt")
+pos <- pos[36:length(pos)]
+
+# Middle English words
+data("negative_terms")
+data("positive_terms")
+
+# bind all terms
+pos <- c(pos, positive_terms)
+neg <- c(neg, negative_terms)
+
+# sentiment scoring FUN
+sentiment_score = function(text, pos.words, neg.words){
+  scores = plyr::laply(text,
+                 function(text, pos.words, neg.words){
+                   text = gsub("[[:punct:]]", "", text)
+                   text = gsub("[[:cntrl:]]", "", text)
+                   text = gsub('\\d+', '', text)
+                   text = sapply(text, tolower)
+                   word_list = stringr::str_split(text, "\\s+")
+                   words = unlist(word_list)
+                   positive_matches = match(words, pos.words)
+                   negative_matches = match(words, neg.words)
+                   positive_matches = !is.na(positive_matches)
+                   negative_matches = !is.na(negative_matches)
+                   score = sum(positive_matches) - sum(negative_matches)
+                   return(score)
+                 }, pos.words, neg.words)
+  return(scores)
+}
+
+king_james_df$Sentiment <- sentiment_score(king_james_df$Text, pos, neg)
+
+# mean sentiment / book
+bks <- plyr::ddply(king_james_df, c("Book.Abbreviation", "Book.Number"),
+                                    plyr::summarise,
+                   Sentiment = mean(Sentiment))
+bks$colour <- ifelse(bks$Sentiment >= 0, "#247ba0", "#ff1654")
+plot_ly(bks,
+        x = Book.Number,
+        y = Sentiment,
+        type = "bar",
+        text = Book.Abbreviation,
+        hoverinfo = text,
+        color = colour) %>%
+  layout(title = "Average sentiment by book")
+```
+
+#### Testaments
+
+We can then average the sentiment by books to see which is the most gruesome.
+
+```{r}
+test_sent <- plyr::ddply(king_james_df, "Testament", plyr::summarise, 
+                         sentiment = mean(sentiment))
+knitr::kable(test_sent[which.min(test_sent$sentiment),])
+```
+
+#### Books
+
+We can also look at the sentiment of the 66 books of which the bible is comprised.
+
+```{r}
+book_sent <- plyr::ddply(king_james_df, "King.James.Bible", plyr::summarise, 
+                         sentiment = mean(sentiment))
+knitr::kable(book_sent[which.min(book_sent$sentiment),])
+```
+
+The Bible, for those who have not read it, is rather gastly as demonstrated by its low emotional valence; `r sum(king_james_df$sentiment)`(sum of sentiment scores). Indeed verses average a sentiment score of `r round(mean(king_james_df$sentiment), 3)`.
+
+
+
