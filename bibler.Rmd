@@ -2,11 +2,16 @@
 title: "bibler"
 author: "John Coene"
 date: "9 May 2016"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.width = 9)
 library(bibler)
 library(plotly)
 library(tm)
@@ -15,7 +20,7 @@ library(wordcloud)
 
 ## Overview
 
-Bibler includes 6 neat datasets about the Bible and the Apocrypha.
+Bibler includes 6 neat datasets about the Bible and the Apocrypha, all are documented.
 
 ### Bible
 
@@ -35,47 +40,110 @@ Install development version from [github](https://github.com/JohnCoene/bibler).
 
 ```{r, eval=FALSE}
 devtools::install_github("JohnCoene/bibler")
+library(bibler)
 ```
 
-## Text Mining
+## What is this anyways?
+
+### data.frame
+
+The data frames consist of one verse by row.
+
+```{r}
+names(king_james_df) # see ?king_james_df
+```
+
+### Corpus
+
+The [tm](https://cran.r-project.org/package=tm) corpus is comprised of `r length(king_james_tm)` documents, one for each verse and include meta-data.
+
+```{r}
+meta(king_james_tm[[1]])
+```
+
+### Books
+
+Reference list of the books included in datasets.
+
+```{r}
+knitr::kable(head(king_james_books, 5), format = "html")
+```
+
+## Text Exploration
 
 ### Term Frequency
+
+We can have a look at the most mentioned terms in the Bible. Here I use the `king_james_tm` dataset which is a corpus of documents from the [tm](https://cran.r-project.org/package=tm) package. 
 
 ```{r}
 library(wordcloud)
 library(tm)
 data("king_james_tm") # load data
+class(king_james_tm) # check class
+```
+
+In the corpus each verse is a document, it therefore consist of `r length(king_james_tm)` documents.
+
+```{r}
+length(king_james_tm)
+```
+
+Each document comes with meta-data.
+
+```{r}
+meta(king_james_tm[[1]])
+```
+
+`bibler` also comes with a set of `r data("middle_english_stopwords"); length(middle_english_stopwords)` Middle English stopwords.
+
+```{r}
 # clean text
 wc <- tm_map(king_james_tm, tolower) # to lower case
+wc <- tm_map(wc, stripWhitespace)
 wc <- tm_map(wc, removeNumbers) # remove #
 wc <- tm_map(wc, removePunctuation) # remove punctuation
 data("middle_english_stopwords") # get middle english stopwords
-wc <- tm_map(wc, removeWords, c(stopwords("english"), middle_english_stopwords))
+wc <- tm_map(wc, removeWords, c(stopwords("english"), middle_english_stopwords,
+                                "lord", "god")) # remove stopwords
 wc <- tm_map(wc, PlainTextDocument)
 
 # count term frequency
 tdm <- TermDocumentMatrix(wc, control = list(minWordLength = 2))
 tdm <- removeSparseTerms(tdm, 0.99) 
-m <- as.matrix(tdm)
-terms <- sort(rowSums(m), decreasing = TRUE)
-dat <- data.frame(word = names(terms), freq = terms)
+tdm <- as.matrix(tdm)
+tdm <- sort(rowSums(tdm), decreasing = TRUE)
+dat <- data.frame(word = names(tdm), freq = tdm)
 
 # wordcloud
 wordcloud(words = dat$word, scale = c(4, .3), freq = dat$freq, max.words = 100,
-          rot.per = 0.25, colors = brewer.pal(8, "Accent"))
+          rot.per = 0.25, 
+          colors = c("#bce784", "#5dd39e", "#348aa7", "#525174", "#513b56"))
+```
+
+```{r, echo=FALSE}
+rm(wc)
+rm(tdm)
 ```
 
 ### Sentiment Analysis
 
-We can analyse the sentiment of the bible using the [syuzhet](https://cran.r-project.org/web/packages/syuzhet/index.html) package. There are different `methods` available, the default `syuzhet` seems more appropriate given that its dictionnaries were extracted from fictional novels.
+First we can download the well-known Bing Liu lists of positive and negative terms.
 
-```{r}
+* [Hu and Liu Lexicons](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar)
+
+```{r, warning=FALSE}
 # base Bing Liu lexicons
-neg <- readLines("negative-words.txt")
-neg <- pos[36:length(neg)]
-pos <- readLines("positive-words.txt")
+neg <- readLines(paste0("https://raw.githubusercontent.com/JohnCoene/", 
+                        "docs/master/negative-words.txt"))
+neg <- neg[36:length(neg)]
+pos <- readLines(paste0("https://raw.githubusercontent.com/JohnCoene/", 
+                        "docs/master/positive-words.txt"))
 pos <- pos[36:length(pos)]
+```
 
+However those lexicons are based on Internet reviews and other modernities and therefore are not well suited to the King James Bible. To remedy to this `bibler` also comes with lexicons of positive and negative Middle English terms which we can append to the others.
+
+```{r, warning=FALSE}
 # Middle English words
 data("negative_terms")
 data("positive_terms")
@@ -83,7 +151,11 @@ data("positive_terms")
 # bind all terms
 pos <- c(pos, positive_terms)
 neg <- c(neg, negative_terms)
+```
 
+We can now assess the sentiment of each verse and plot the average sentiment by book in order of appearance in the Bible.
+
+```{r, warning=FALSE, fig_width = 8}
 # sentiment scoring FUN
 sentiment_score = function(text, pos.words, neg.words){
   scores = plyr::laply(text,
@@ -107,41 +179,87 @@ sentiment_score = function(text, pos.words, neg.words){
 king_james_df$Sentiment <- sentiment_score(king_james_df$Text, pos, neg)
 
 # mean sentiment / book
-bks <- plyr::ddply(king_james_df, c("Book.Abbreviation", "Book.Number"),
-                                    plyr::summarise,
-                   Sentiment = mean(Sentiment))
-bks$colour <- ifelse(bks$Sentiment >= 0, "#247ba0", "#ff1654")
+bks <- plyr::ddply(king_james_df, c("King.James.Bible", "Book.Number"),
+                                    plyr::summarise, Sentiment = mean(Sentiment))
+
+bks$colour <- ifelse(bks$Sentiment >= 0, "#bce784", "#348aa7")
+bks$label <- ifelse(bks$Sentiment >= 0, "positive", "negative")
 plot_ly(bks,
         x = Book.Number,
         y = Sentiment,
         type = "bar",
-        text = Book.Abbreviation,
+        text = King.James.Bible,
         hoverinfo = text,
-        color = colour) %>%
-  layout(title = "Average sentiment by book")
+        color = label,
+        marker = list(
+          color = colour
+        )) %>%
+  layout(title = "Average sentiment by book",
+         showlegend = FALSE,
+         xaxis = list(title = "Book Number"),
+         width = 800,
+         height = 415)
 ```
 
-#### Testaments
+There is indeed more negativity at the "begining" of the Bible: the Old Testament is far more gruesome. The *Song of Solomon* is a lapse of positivity amidst the spine-chilling godly injunctions as it is scripturally unique in its celebration of sexual love. John 3 i nthe New Testament is also positive, by the Bible standard anyways. John accepts Jesus as the Messiah, baptise, finds the path to God. Good stuff.
 
-We can then average the sentiment by books to see which is the most gruesome.
+The most negative book according to the analysis Zephaniah is best summed by this terse and unambiguous snippet:
+
+> "You also, O Ethiopians, / Shall be killed by my sword."
+  
+```{r, warning = FALSE}
+library(ggplot2)
+
+rect <- data.frame(xmin = c(0, 39), xmax = c(39, 67), ymin = c(-1.1, -1.1), 
+                   ymax = c(1.5, 1.5), 
+                   label = c("Old Testament", "New Testament"),
+                   fill = c("#bce784", "#348aa7"))
+
+ggplot(data = bks, aes(x = Book.Number, y = Sentiment)) +
+    geom_rect(data = rect, 
+              aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, 
+                  fill = fill, alpha = 0.5),
+            inherit.aes = FALSE,
+            position = "identity") +
+  geom_text(data = rect, aes(x = c(39/2, (39+(27/2))), y = ymax - 0.2, 
+                             label = label),
+            color = "grey20", fontface = "bold", size = 4) +
+  geom_bar(stat = "identity", fill = "grey50") + 
+  scale_fill_manual(values = c("#bce784", "#348aa7")) +
+  theme(legend.position = "none",
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank())
+```
+
+### Testaments
+
+Let's split the corpus into two, one for each Testament.
 
 ```{r}
-test_sent <- plyr::ddply(king_james_df, "Testament", plyr::summarise, 
-                         sentiment = mean(sentiment))
-knitr::kable(test_sent[which.min(test_sent$sentiment),])
+# split
+old <- paste0(king_james_df[king_james_df$Testament == "Old Testament", "Text"],
+              collapse = "")
+new <- paste0(king_james_df[king_james_df$Testament == "New Testament", "Text"],
+              collapse = "")
+corp <- Corpus(VectorSource(c(old, new))) # combine
 ```
-
-#### Books
-
-We can also look at the sentiment of the 66 books of which the bible is comprised.
 
 ```{r}
-book_sent <- plyr::ddply(king_james_df, "King.James.Bible", plyr::summarise, 
-                         sentiment = mean(sentiment))
-knitr::kable(book_sent[which.min(book_sent$sentiment),])
+corp <- tm_map(corp, removePunctuation)
+corp <- tm_map(corp, content_transformer(tolower))
+corp <- tm_map(corp, removeNumbers)
+corp <- tm_map(corp, removeWords, c(middle_english_stopwords, 
+                                    stopwords("english")))
+
+term.matrix <- TermDocumentMatrix(corp)
+term.matrix <- as.matrix(term.matrix)
+colnames(term.matrix) <- c("Old Testament", "New Testament")
+comparison.cloud(term.matrix, max.words = 200, random.order = FALSE,
+                 rot.per = 0.25, colors = c("#bce784", "#348aa7"), title.size = 1, 
+                 scale = c(3, .5))
 ```
 
-The Bible, for those who have not read it, is rather gastly as demonstrated by its low emotional valence; `r sum(king_james_df$sentiment)`(sum of sentiment scores). Indeed verses average a sentiment score of `r round(mean(king_james_df$sentiment), 3)`.
-
-
-
+The New Testament is all about Jesus and the band of disciples roaming the lands laying hands. While the Old Testament is more about God appearing to illiterate desert people ruling that *thee* and *thy* shall obey.
