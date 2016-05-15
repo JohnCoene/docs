@@ -4,6 +4,7 @@ author: "John Coene"
 date: "9 May 2016"
 output:
   html_document:
+    theme: yeti
     toc: true
     toc_float:
       collapsed: false
@@ -20,7 +21,7 @@ library(wordcloud)
 
 ## Overview
 
-Bibler includes 6 neat datasets about the Bible and the Apocrypha, all are documented.
+Bibler includes 6 neat datasets about the King James Bible and the Apocrypha, all are documented.
 
 ### Bible
 
@@ -34,6 +35,12 @@ Bibler includes 6 neat datasets about the Bible and the Apocrypha, all are docum
 * `apocrypha_tm` The Apocrypha as [tm](https://cran.r-project.org/package=tm) corpus (`c("VCorpus", "Corpus"`)
 * `apocrypha_books` List of books that constitute the Apocrypha
 
+### Utils
+
+* `middle_english_stopwords` Character vector of Middle English stopwords
+* `middle_english_positive` Lexicon of positive Middle English terms
+* `middle_english_negative` Lexicon of negative Middle English terms
+
 ## Install
 
 Install development version from [github](https://github.com/JohnCoene/bibler).
@@ -43,11 +50,30 @@ devtools::install_github("JohnCoene/bibler")
 library(bibler)
 ```
 
-## What is this anyways?
+## Datasets
+
+Both the `data.frame` and `Corpus` (tm) datasets include the following variables:
+
+* `Book.Abbreviation`
+* `King.James.Bible` - book title as in King James Bible
+* `Vulgate` - book title as in Vulgate
+* `Douay.Rheims` - book title in Douay Reihms version
+* `Full.Title.Auth.V` - book title in authorized version
+* `Testament` - Testament in which book/verse can be found.
+* `Book.Number` - Order of appearance of books, starting with Genesis #1
+* `Verse`
+* `Text` - content of verse
+
+In the corpus datasets (ending in `_tm`) each verse makes a document while in the `data.frame` each row is a verse.
+
+```{r}
+library(tm)
+length(king_james_tm) == nrow(king_james_df)
+```
 
 ### data.frame
 
-The data frames consist of one verse by row.
+The data frames consist of one verse by row, meta-data are variables.
 
 ```{r}
 names(king_james_df) # see ?king_james_df
@@ -55,7 +81,7 @@ names(king_james_df) # see ?king_james_df
 
 ### Corpus
 
-The [tm](https://cran.r-project.org/package=tm) corpus is comprised of `r length(king_james_tm)` documents, one for each verse and include meta-data.
+The [tm](https://cran.r-project.org/package=tm) corpus is comprised of `r length(king_james_tm)` documents, one for each verse and include meta-data (variables in `_df` dataset).
 
 ```{r}
 meta(king_james_tm[[1]])
@@ -78,31 +104,19 @@ We can have a look at the most mentioned terms in the Bible. Here I use the `kin
 ```{r}
 library(wordcloud)
 library(tm)
-data("king_james_tm") # load data
-class(king_james_tm) # check class
-```
-
-In the corpus each verse is a document, it therefore consist of `r length(king_james_tm)` documents.
-
-```{r}
-length(king_james_tm)
-```
-
-Each document comes with meta-data.
-
-```{r}
-meta(king_james_tm[[1]])
+data("king_james_tm")
 ```
 
 `bibler` also comes with a set of `r data("middle_english_stopwords"); length(middle_english_stopwords)` Middle English stopwords.
 
 ```{r}
+data("middle_english_stopwords") # get middle english stopwords
+
 # clean text
 wc <- tm_map(king_james_tm, tolower) # to lower case
 wc <- tm_map(wc, stripWhitespace)
 wc <- tm_map(wc, removeNumbers) # remove #
 wc <- tm_map(wc, removePunctuation) # remove punctuation
-data("middle_english_stopwords") # get middle english stopwords
 wc <- tm_map(wc, removeWords, c(stopwords("english"), middle_english_stopwords,
                                 "lord", "god")) # remove stopwords
 wc <- tm_map(wc, PlainTextDocument)
@@ -131,7 +145,7 @@ First we can download the well-known Bing Liu lists of positive and negative ter
 
 * [Hu and Liu Lexicons](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar)
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, eval=FALSE}
 # base Bing Liu lexicons
 neg <- readLines(paste0("https://raw.githubusercontent.com/JohnCoene/", 
                         "docs/master/negative-words.txt"))
@@ -141,16 +155,29 @@ pos <- readLines(paste0("https://raw.githubusercontent.com/JohnCoene/",
 pos <- pos[36:length(pos)]
 ```
 
-However those lexicons are based on Internet reviews and other modernities and therefore are not well suited to the King James Bible. To remedy to this `bibler` also comes with lexicons of positive and negative Middle English terms which we can append to the others.
+```{r, warning=FALSE, eval=TRUE, echo=FALSE}
+# base Bing Liu lexicons
+neg <- readLines(paste0("negative-words.txt"))
+neg <- neg[36:length(neg)]
+pos <- readLines(paste0("positive-words.txt"))
+pos <- pos[36:length(pos)]
+```
+
+However those lexicons are based on Internet reviews and other modernities and therefore are not well suited to the King James Bible. To remedy to this `bibler` also comes with lexicons of positive and negative Middle English terms.
+
+* `r length(middle_english_positive)` Positive terms
+* `r length(middle_english_negative)` Negative terms
 
 ```{r, warning=FALSE}
-# Middle English words
-data("negative_terms")
-data("positive_terms")
+data("middle_english_negative")
+data("middle_english_positive")
+head(middle_english_negative) # inspect
+```
 
+```{r}
 # bind all terms
-pos <- c(pos, positive_terms)
-neg <- c(neg, negative_terms)
+pos <- c(pos, middle_english_positive)
+neg <- c(neg, middle_english_negative)
 ```
 
 We can now assess the sentiment of each verse and plot the average sentiment by book in order of appearance in the Bible.
@@ -176,6 +203,7 @@ sentiment_score = function(text, pos.words, neg.words){
   return(scores)
 }
 
+# score each verse
 king_james_df$Sentiment <- sentiment_score(king_james_df$Text, pos, neg)
 
 # mean sentiment / book
@@ -201,11 +229,11 @@ plot_ly(bks,
          height = 415)
 ```
 
-There is indeed more negativity at the "begining" of the Bible: the Old Testament is far more gruesome. The *Song of Solomon* is a lapse of positivity amidst the spine-chilling godly injunctions as it is scripturally unique in its celebration of sexual love. John 3 i nthe New Testament is also positive, by the Bible standard anyways. John accepts Jesus as the Messiah, baptise, finds the path to God. Good stuff.
-
-The most negative book according to the analysis Zephaniah is best summed by this terse and unambiguous snippet:
+There is indeed more negativity at the "begining" of the Bible: the Old Testament is far more gruesome than the New Testament. The *Song of Solomon* is a lapse of light amidst the dark and spine-chilling godly injunctions of the Old Testament, it is scripturally unique in its celebration of sexual love. John 3 in the New Testament is also positive, by the Bible standard anyway: John accepts Jesus as the Messiah, gets baptised, finds the path to God, etc. Good stuff. The most negative book according to the analysis is Zephaniah which is not inaccurate, the message of the book is best summed by this terse and unambiguous passage:
 
 > "You also, O Ethiopians, / Shall be killed by my sword."
+
+Zephaniah comes towards the end of the Old Testament and those who have not accepted the truth by then must be slain.
   
 ```{r, warning = FALSE}
 library(ggplot2)
@@ -234,9 +262,14 @@ ggplot(data = bks, aes(x = Book.Number, y = Sentiment)) +
         axis.title.x = element_blank())
 ```
 
+Average sentiment:
+
+* Old Testament: `r mean(king_james_df[king_james_df$Testament == "Old Testament",]$Sentiment)`
+* New Testament: `mean(king_james_df[king_james_df$Testament == "New Testament",]$Sentiment)`
+
 ### Testaments
 
-Let's split the corpus into two, one for each Testament.
+Since there are textual differences between Testaments we'll categorise the verses according to each and plot a comparison cloud.
 
 ```{r}
 # split
@@ -262,4 +295,27 @@ comparison.cloud(term.matrix, max.words = 200, random.order = FALSE,
                  scale = c(3, .5))
 ```
 
-The New Testament is all about Jesus and the band of disciples roaming the lands laying hands. While the Old Testament is more about God appearing to illiterate desert people ruling that *thee* and *thy* shall obey.
+The New Testament is mostly about Jesus Christ and the band of disciples roaming the lands laying hands. While the Old Testament is more about God appearing to illiterate desert people ruling that *thee* and *thy* shall obey.
+
+### Mary
+
+Christopher Hitchens once said that Mary only appeared three times in the bibe. I cannot tell exactly what he meants by "appeared" (only God knows now) but we can tell that she is mentioned far more often - `r length(king_james_df$Text[grep("Mary", king_james_df$Text)])` times.
+
+
+```{r}
+length(king_james_df$Text[grep("Mary[[:space:]]|Mary[[:punct:]]", king_james_df$Text)]) # nbr mentions
+king_james_df$Text[grep("Mary[[:space:]]|Mary[[:punct:]]", king_james_df$Text)][1] # First appearance in Bible
+```
+
+### Abraham
+
+What about Abraham? If the willingness to kill your own child gets you in the Bible surely it should get you mentioned in here.
+
+```{r}
+length(grep("Abraham", king_james_df$Text))
+```
+
+## Disclaimer
+
+1. In the event that the above has not made it obvious; I am not an expert in text mining or natural language processing, let alone Middle English.
+2. Yes, this is an opinionated piece.
