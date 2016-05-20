@@ -4,6 +4,7 @@ author: "John Coene"
 date: "9 May 2016"
 output:
   html_document:
+    code_folding: hide
     theme: yeti
     toc: true
     toc_float:
@@ -12,7 +13,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.width = 9)
+knitr::opts_chunk$set(echo = TRUE, fig.width = 9, comment = "> ")
 library(bibler)
 library(plotly)
 library(tm)
@@ -70,7 +71,7 @@ Both the `data.frame` and `Corpus` (tm) datasets include the following variables
 
 In the corpus datasets (ending in `_tm`) each verse makes a document while in the `data.frame` each row is a verse.
 
-```{r}
+```{r, eval=FALSE}
 library(tm)
 length(king_james_tm) == nrow(king_james_df)
 ```
@@ -88,14 +89,14 @@ names(king_james_df) # see ?king_james_df
 The [tm](https://cran.r-project.org/package=tm) corpus is comprised of `r length(king_james_tm)` documents, one for each verse and include meta-data (variables in `_df` dataset).
 
 ```{r}
-meta(king_james_tm[[1]])
+meta(king_james_tm[[1]]) # meta of first verse
 ```
 
 ### Books
 
 Reference list of the books included in datasets.
 
-```{r}
+```{r, echo=FALSE}
 knitr::kable(head(king_james_books, 5), format = "html")
 ```
 
@@ -105,15 +106,12 @@ knitr::kable(head(king_james_books, 5), format = "html")
 
 We can have a look at the most mentioned terms in the Bible. Here I use the `king_james_tm` dataset which is a corpus of documents from the [tm](https://cran.r-project.org/package=tm) package. 
 
+`bibler` also comes with a set of `r data("middle_english_stopwords"); length(middle_english_stopwords)` Middle English stopwords.
+
 ```{r}
 library(wordcloud)
 library(tm)
 data("king_james_tm")
-```
-
-`bibler` also comes with a set of `r data("middle_english_stopwords"); length(middle_english_stopwords)` Middle English stopwords.
-
-```{r}
 data("middle_english_stopwords") # get middle english stopwords
 
 # clean text
@@ -147,7 +145,7 @@ rm(tdm)
 
 First we can download the well-known Bing Liu lists of positive and negative terms.
 
-* [Hu and Liu Lexicons](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar)
+[Download](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar) Hu and Liu Lexicons
 
 ```{r, warning=FALSE, eval=FALSE}
 # base Bing Liu lexicons
@@ -172,21 +170,14 @@ However those lexicons are based on Internet reviews and other modernities and t
 * `r length(middle_english_positive)` Positive terms
 * `r length(middle_english_negative)` Negative terms
 
-```{r, warning=FALSE}
-data("middle_english_negative")
-data("middle_english_positive")
-head(middle_english_negative) # inspect
-```
-
-```{r}
-# bind all terms
-pos <- c(pos, middle_english_positive)
-neg <- c(neg, middle_english_negative)
-```
-
 We can now assess the sentiment of each verse and plot the average sentiment by book in order of appearance in the Bible.
 
 ```{r, warning=FALSE, fig_width = 8}
+data("middle_english_negative")
+data("middle_english_positive")
+pos <- c(pos, middle_english_positive)
+neg <- c(neg, middle_english_negative)
+
 # sentiment scoring FUN
 sentiment_score = function(text, pos.words, neg.words){
   scores = plyr::laply(text,
@@ -214,7 +205,7 @@ king_james_df$Sentiment <- sentiment_score(king_james_df$Text, pos, neg)
 bks <- plyr::ddply(king_james_df, c("King.James.Bible", "Book.Number"),
                                     plyr::summarise, Sentiment = mean(Sentiment))
 
-bks$colour <- ifelse(bks$Sentiment >= 0, "#5dd39e", "#348aa7")
+bks$colour <- ifelse(bks$Sentiment >= 0, "#5dd39e", "#525174")
 bks$label <- ifelse(bks$Sentiment >= 0, "positive", "negative")
 plot_ly(bks,
         x = Book.Number,
@@ -245,7 +236,7 @@ library(ggplot2)
 rect <- data.frame(xmin = c(0, 39), xmax = c(39, 67), ymin = c(-1.1, -1.1), 
                    ymax = c(1.5, 1.5), 
                    label = c("Old Testament", "New Testament"),
-                   fill = c("#bce784", "#348aa7"))
+                   fill = c("#bce784", "#525174"))
 
 ggplot(data = bks, aes(x = Book.Number, y = Sentiment)) +
     geom_rect(data = rect, 
@@ -257,7 +248,7 @@ ggplot(data = bks, aes(x = Book.Number, y = Sentiment)) +
                              label = label),
             color = "grey20", fontface = "bold", size = 4) +
   geom_bar(stat = "identity", fill = "grey50") + 
-  scale_fill_manual(values = c("#5dd39e", "#348aa7")) +
+  scale_fill_manual(values = c("#5dd39e", "#525174")) +
   theme(legend.position = "none",
         panel.border = element_blank(),
         panel.background = element_blank(),
@@ -282,9 +273,6 @@ old <- paste0(king_james_df[king_james_df$Testament == "Old Testament", "Text"],
 new <- paste0(king_james_df[king_james_df$Testament == "New Testament", "Text"],
               collapse = "")
 corp <- Corpus(VectorSource(c(old, new))) # combine
-```
-
-```{r}
 corp <- tm_map(corp, removePunctuation)
 corp <- tm_map(corp, content_transformer(tolower))
 corp <- tm_map(corp, removeNumbers)
@@ -295,7 +283,7 @@ term.matrix <- TermDocumentMatrix(corp)
 term.matrix <- as.matrix(term.matrix)
 colnames(term.matrix) <- c("Old Testament", "New Testament")
 comparison.cloud(term.matrix, max.words = 200, random.order = FALSE,
-                 rot.per = 0.25, colors = rev(c("#5dd39e", "#348aa7")), title.size = 1, 
+                 rot.per = 0.25, colors = rev(c("#5dd39e", "#525174")), title.size = 1, 
                  scale = c(3, .5))
 ```
 
@@ -306,14 +294,13 @@ The New Testament is mostly about Jesus Christ and the band of disciples roaming
 Christopher Hitchens once said that Mary only appeared three times in the bibe. I cannot tell exactly what he meants by "appeared" (only God knows now) but we can tell that she is mentioned far more often - `r length(king_james_df$Text[grep("Mary", king_james_df$Text)])` times.
 
 
-```{r}
+```{r, eval=FALSE}
 length(king_james_df$Text[grep("Mary[[:space:]]|Mary[[:punct:]]", king_james_df$Text)]) # nbr mentions
-king_james_df$Text[grep("Mary[[:space:]]|Mary[[:punct:]]", king_james_df$Text)][1] # First appearance in Bible
 ```
 
 ### Network of Terms
 
-```{r, fig.width=9, fig.height=9}
+```{r, fig.width=9, fig.height=9, cache=TRUE}
 library(tidytext)
 data("king_james_df")
 
@@ -348,10 +335,11 @@ wc <- igraph::walktrap.community(g)
 plot(wc, g, layout = igraph::layout.fruchterman.reingold(g, niter=10000), 
      vertex.color = "#DD1C1A",
      vertex.label.family = "sans",
-     vertex.label.color = "black", 
+     vertex.label.color = "grey5", 
+     vertex.size = log(igraph::degree(g))*3,
      vertex.label.cex = log1p(igraph::degree(g))/3.5,
      edge.arrow.size = 0.2, 
      edge.arrow.width = 0.3, edge.width = 1,
-     edge.color = hsv(h = 0, s = 0, v = 0, alpha = 0.7),
+     edge.color = "grey50",
      vertex.frame.color="#FFFFFF")
 ```
