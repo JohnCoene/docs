@@ -326,7 +326,7 @@ king_james_df$Terms <- gsub("[[:blank:]]", "", king_james_df$Terms)
 pairs <- king_james_df %>%
   pair_count(King.James.Bible, Terms, sort = TRUE)
 
-pairs <- pairs[1:250,] # take most freq pairs
+pairs <- pairs[1:300,] # take most freq pairs
 
 g <- igraph::graph.data.frame(pairs, directed = TRUE)
 g <- igraph::simplify(g) # remove loops
