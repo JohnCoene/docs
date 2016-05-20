@@ -19,9 +19,22 @@ library(tm)
 library(wordcloud)
 ```
 
-## Overview
+## Preamble
 
-Bibler includes 6 neat datasets about the King James Bible and the Apocrypha, all are documented.
+The Bible in R.
+
+Bibler includes 6 neat datasets about the King James Bible and the Apocrypha.
+
+## Install
+
+Install development version from [github](https://github.com/JohnCoene/bibler).
+
+```{r, eval=FALSE}
+devtools::install_github("JohnCoene/bibler")
+library(bibler)
+```
+
+## Overview
 
 ### Bible
 
@@ -40,15 +53,6 @@ Bibler includes 6 neat datasets about the King James Bible and the Apocrypha, al
 * `middle_english_stopwords` Character vector of Middle English stopwords
 * `middle_english_positive` Lexicon of positive Middle English terms
 * `middle_english_negative` Lexicon of negative Middle English terms
-
-## Install
-
-Install development version from [github](https://github.com/JohnCoene/bibler).
-
-```{r, eval=FALSE}
-devtools::install_github("JohnCoene/bibler")
-library(bibler)
-```
 
 ## Datasets
 
@@ -210,7 +214,7 @@ king_james_df$Sentiment <- sentiment_score(king_james_df$Text, pos, neg)
 bks <- plyr::ddply(king_james_df, c("King.James.Bible", "Book.Number"),
                                     plyr::summarise, Sentiment = mean(Sentiment))
 
-bks$colour <- ifelse(bks$Sentiment >= 0, "#bce784", "#348aa7")
+bks$colour <- ifelse(bks$Sentiment >= 0, "#5dd39e", "#348aa7")
 bks$label <- ifelse(bks$Sentiment >= 0, "positive", "negative")
 plot_ly(bks,
         x = Book.Number,
@@ -253,7 +257,7 @@ ggplot(data = bks, aes(x = Book.Number, y = Sentiment)) +
                              label = label),
             color = "grey20", fontface = "bold", size = 4) +
   geom_bar(stat = "identity", fill = "grey50") + 
-  scale_fill_manual(values = c("#bce784", "#348aa7")) +
+  scale_fill_manual(values = c("#5dd39e", "#348aa7")) +
   theme(legend.position = "none",
         panel.border = element_blank(),
         panel.background = element_blank(),
@@ -264,8 +268,8 @@ ggplot(data = bks, aes(x = Book.Number, y = Sentiment)) +
 
 Average sentiment:
 
-* Old Testament: `r mean(king_james_df[king_james_df$Testament == "Old Testament",]$Sentiment)`
-* New Testament: `mean(king_james_df[king_james_df$Testament == "New Testament",]$Sentiment)`
+* Old Testament: `r round(mean(king_james_df[king_james_df$Testament == "Old Testament",]$Sentiment), 3)`
+* New Testament: `r round(mean(king_james_df[king_james_df$Testament == "New Testament",]$Sentiment), 3)`
 
 ### Testaments
 
@@ -291,7 +295,7 @@ term.matrix <- TermDocumentMatrix(corp)
 term.matrix <- as.matrix(term.matrix)
 colnames(term.matrix) <- c("Old Testament", "New Testament")
 comparison.cloud(term.matrix, max.words = 200, random.order = FALSE,
-                 rot.per = 0.25, colors = c("#bce784", "#348aa7"), title.size = 1, 
+                 rot.per = 0.25, colors = rev(c("#5dd39e", "#348aa7")), title.size = 1, 
                  scale = c(3, .5))
 ```
 
@@ -307,15 +311,47 @@ length(king_james_df$Text[grep("Mary[[:space:]]|Mary[[:punct:]]", king_james_df$
 king_james_df$Text[grep("Mary[[:space:]]|Mary[[:punct:]]", king_james_df$Text)][1] # First appearance in Bible
 ```
 
-### Abraham
+### Network of Terms
 
-What about Abraham? If the willingness to kill your own child gets you in the Bible surely it should get you mentioned in here.
+```{r, fig.width=9, fig.height=9}
+library(tidytext)
+data("king_james_df")
 
-```{r}
-length(grep("Abraham", king_james_df$Text))
+king_james_df$Text <- gsub("[[:digit:]]", "", king_james_df$Text)
+king_james_df$Text <- gsub("[[:cntrl:]]", "", king_james_df$Text)
+king_james_df$Text <- tolower(king_james_df$Text)
+king_james_df$Text <- tm::removeWords(as.character(king_james_df$Text), 
+                                    c(tm::stopwords("english"),
+                                      middle_english_stopwords,
+                                      "will", "said", "lord", "god",
+                                      "neither", "day", "therefore", 
+                                      "take", "away", "hand", "put", 
+                                      "make", "great", "among", "thing",
+                                      "things", "yet", "word", "according",
+                                      "know", "us", "see", "men", "man",
+                                      "time", "every", "hands", "go", "many",
+                                      "ever", "s"))
+king_james_df <- king_james_df %>%
+  unnest_tokens(Terms, Text)
+king_james_df$Terms <- trimws(king_james_df$Terms)
+king_james_df$Terms <- gsub("[[:punct:]]", "", king_james_df$Terms)
+king_james_df$Terms <- gsub("[[:blank:]]", "", king_james_df$Terms)
+pairs <- king_james_df %>%
+  pair_count(King.James.Bible, Terms, sort = TRUE)
+
+pairs <- pairs[1:250,] # take most freq pairs
+
+g <- igraph::graph.data.frame(pairs, directed = TRUE)
+g <- igraph::simplify(g) # remove loops
+wc <- igraph::walktrap.community(g)
+
+plot(wc, g, layout = igraph::layout.fruchterman.reingold(g, niter=10000), 
+     vertex.color = "#DD1C1A",
+     vertex.label.family = "sans",
+     vertex.label.color = "black", 
+     vertex.label.cex = log1p(igraph::degree(g))/3.5,
+     edge.arrow.size = 0.2, 
+     edge.arrow.width = 0.3, edge.width = 1,
+     edge.color = hsv(h = 0, s = 0, v = 0, alpha = 0.7),
+     vertex.frame.color="#FFFFFF")
 ```
-
-## Disclaimer
-
-1. In the event that the above has not made it obvious; I am not an expert in text mining or natural language processing, let alone Middle English.
-2. Yes, this is an opinionated piece.
