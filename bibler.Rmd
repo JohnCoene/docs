@@ -78,7 +78,7 @@ length(king_james_tm) == nrow(king_james_df)
 
 ### data.frame
 
-The data frames consist of one verse by row, meta-data are variables.
+The data frames consist of one verse by row, meta-data are variables/columns.
 
 ```{r}
 names(king_james_df) # see ?king_james_df
@@ -86,7 +86,7 @@ names(king_james_df) # see ?king_james_df
 
 ### Corpus
 
-The [tm](https://cran.r-project.org/package=tm) corpus is comprised of `r length(king_james_tm)` documents, one for each verse and include meta-data (variables in `_df` dataset).
+The [tm](https://cran.r-project.org/package=tm) corpus is comprised of `r length(king_james_tm)` documents, one for each verse and include meta-data (identical to columns in `_df` dataset).
 
 ```{r}
 meta(king_james_tm[[1]]) # meta of first verse
@@ -100,7 +100,7 @@ Reference list of the books included in datasets.
 knitr::kable(head(king_james_books, 5), format = "html")
 ```
 
-## Text Exploration
+## Examples
 
 ### Term Frequency
 
@@ -145,7 +145,7 @@ rm(tdm)
 
 First we can download the well-known Bing Liu lists of positive and negative terms.
 
-[Download](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar) Hu and Liu Lexicons
+* [Download](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar) Hu and Liu Lexicons
 
 ```{r, warning=FALSE, eval=FALSE}
 # base Bing Liu lexicons
@@ -224,7 +224,13 @@ plot_ly(bks,
          height = 415)
 ```
 
-There is indeed more negativity at the "begining" of the Bible: the Old Testament is far more gruesome than the New Testament. The *Song of Solomon* is a lapse of light amidst the dark and spine-chilling godly injunctions of the Old Testament, it is scripturally unique in its celebration of sexual love. John 3 in the New Testament is also positive, by the Bible standard anyway: John accepts Jesus as the Messiah, gets baptised, finds the path to God, etc. Good stuff. The most negative book according to the analysis is Zephaniah which is not inaccurate, the message of the book is best summed by this terse and unambiguous passage:
+There is indeed more negativity at the "beginning" of the Bible: the Old Testament is far more gruesome than the New Testament. 
+
+The *Song of Solomon* (book #22) is a lapse of light amidst the dark and spine-chilling godly injunctions of the Old Testament, it is scripturally unique in its celebration of sexual love. 
+
+John 3 in the New Testament is also positive, by the Bible standard anyway: John accepts Jesus as the Messiah, gets baptised, finds the path to God, etc. Good stuff. 
+
+The most negative book according to the analysis is *Zephaniah* (book #36) which is not inaccurate, the message of the book is best summed by this terse and unambiguous passage:
 
 > "You also, O Ethiopians, / Shall be killed by my sword."
 
@@ -291,7 +297,7 @@ The New Testament is mostly about Jesus Christ and the band of disciples roaming
 
 ### Mary
 
-Christopher Hitchens once said that Mary only appeared three times in the bibe. I cannot tell exactly what he meants by "appeared" (only God knows now) but we can tell that she is mentioned far more often - `r length(king_james_df$Text[grep("Mary", king_james_df$Text)])` times.
+Christopher Hitchens once said that Mary only appeared three times in the bibe. I cannot tell exactly what he meant by "appeared" (only God knows now) but we can tell that she is mentioned far more often - `r length(king_james_df$Text[grep("Mary", king_james_df$Text)])` times.
 
 
 ```{r, eval=FALSE}
