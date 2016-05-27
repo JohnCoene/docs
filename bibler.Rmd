@@ -117,7 +117,7 @@ data("middle_english_stopwords") # get middle english stopwords
 # clean text
 wc <- tm_map(king_james_tm, tolower) # to lower case
 wc <- tm_map(wc, stripWhitespace)
-wc <- tm_map(wc, removeNumbers) # remove #
+wc <- tm_map(wc, removeNumbers) # remove
 wc <- tm_map(wc, removePunctuation) # remove punctuation
 wc <- tm_map(wc, removeWords, c(stopwords("english"), middle_english_stopwords,
                                 "lord", "god")) # remove stopwords
