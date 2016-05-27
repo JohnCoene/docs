@@ -88,7 +88,7 @@ wordcloud::wordcloud(count$x, count$freq, max.words = 100)
 
 ```{r, echo=FALSE, fig.height=5}
 par(bg="#fdf6e3", mar=c(1,1,1,1))
-wordcloud::wordcloud(count$x, count$freq, max.words = 100, 
+wordcloud::wordcloud(count$x, count$freq, max.words = 100, rot.per = 0.25,
                      colors = c("#b58900", "#dc322f", "#6c71c4",
                                 "#268bd2", "#859900"))
 ```
@@ -131,43 +131,88 @@ See `?get_emails` @details for other valid `release` values.
 ## read
 
 ```{r}
-files <- list.files("benghazi", pattern = ".txt") # list files
+files <- list.files("Benghazi", pattern = ".txt") # list files
 length(files) # print number of emails
 head(files, 8)
 # read all emails
 content <- lapply(files, function(x){
-  readLines(paste0("benghazi/",x))
+  readLines(paste0("Benghazi/",x))
 })
-```
-
-## clean
-
-Remove empty lines from the emails.
-
-```{r}
-content <- sapply(content, function(x){
-  x[which(x != "")] # remove empty lines
-})
-content <- lapply(content, function(x){
-  paste0(x, collapse = " ")
-})
-content[[1]] # inspect first email
-```
-
-## TM
-
-We can use the [tm](https://cran.r-project.org/web/packages/tm/index.html) package to analyse the emails.
-
-```{r, eval=FALSE}
-library(tm)
-em <- Corpus(VectorSource(content))
 ```
 
 ## Clean
 
 ```{r}
+content <- sapply(content, function(x){
+  x <- x[which(x != "")] # remove empty lines
+  x <- tolower(x)
+  return(x)
+})
+
+# patterns
+pt <- paste0("case|from\\:|to\\:|cc\\:|@[a-z]+|state\\-+|",
+             "state dept. -+|release in +", "|\\(source comment")
+index <- lapply(1:length(content), function(x){
+  grep(pt, content[[x]]) # identify index including patterns
+})
+
+content <- lapply(1:length(index), function(x){
+  content[[x]][-index[[x]]] # remove
+})
+
+# date
+dt <- paste0("monday|tuesday|wednesday|thursday|friday|saturday|sunday,",
+             "[:space:]january|february|march|april|may|june|july|august|",
+             "september|october|november|december[:space:][0-9],[:space:]",
+             "[0-9]{4}[:space:][0-9]:[0-9]{2}[:space:]am|pm")
+
+content <- lapply(content, function(x){
+  paste0(x, collapse = "")
+})
+```
+
+# Text Exploration
+
+## TM
+
+We can use the [tm](https://cran.r-project.org/web/packages/tm/index.html) package to analyse the emails.
+
+```{r}
+library(tm)
+em <- Corpus(VectorSource(content))
+```
+
+## Wordcloud
+
+```{r}
 em <- tm_map(em, content_transformer(tolower)) # to lower case
+em <- tm_map(em, stripWhitespace) # remove white spaces
 em <- tm_map(em, removeWords, stopwords("english")) # remove stopwords
 em <- tm_map(em, removePunctuation) # remove stopwords
+em <- tm_map(em, removeNumbers) # remove numbers
+em <- tm_map(em, PlainTextDocument)
+
+# count term frequency
+tdm <- TermDocumentMatrix(em, control = list(minWordLength = 2))
+tdm <- removeSparseTerms(tdm, 0.99) 
+tdm <- as.matrix(tdm)
+tdm <- sort(rowSums(tdm), decreasing = TRUE)
+dat <- data.frame(word = names(tdm), freq = tdm)
 ```
+
+## Plot
+
+```{r, eval=FALSE}
+wordcloud::wordcloud(count$x, count$freq, max.words = 100)
+```
+
+```{r, echo=FALSE, fig.height=5, warning=FALSE}
+par(bg="#fdf6e3", mar=c(1,1,1,1))
+# wordcloud
+wordcloud:: wordcloud(words = dat$word, scale = c(2.5, .1), freq = dat$freq,
+                      max.words = 100, rot.per = 0.25,
+                      colors = c("#b58900", "#dc322f", "#6c71c4",
+                                "#268bd2", "#859900"))
+```
+
 
