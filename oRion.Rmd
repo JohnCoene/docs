@@ -1,0 +1,1440 @@
+---
+title: "oRion"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+```{r knitr_init, echo=FALSE, cache=FALSE, warning=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=FALSE,
+	             cache=TRUE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=75)
+```
+
+# createAd
+
+Create an ad.
+
+## Arguments 
+
+*`body` Body of request that includes ad settings. See examples and details.
+
+## Details
+Valid ad settings (`body`):
+
+* `adset_id` Adset id to which the ad belongs.
+* `name` Ad name, unique.
+* `icon_url` Logo image url. Must be larger than 84*84 px and have an aspect ratio of 1:1, in JPG or PNG format. File must not exceed 100KB.
+* `title` Ad headline
+* `desc` Description tells people a bit more about your Application. Make sure to clearly explain what you are promoting.
+* `button_text` Button display text, use \code{\link{buttonText}} to generate otherwise,
+    - `1`: Download
+    - `2`: Install
+    - `3`: Check
+    - `4`: Free
+    - `5`: Play 
+    - `6`: Buy 
+    - `7`: More.
+* `image_url` Image url. Must be larger than 600\*314 px and have an aspect ratio of 1.9:1. Best is 1200\*628 px, JPG or PNG format. File size must not exceed 500KB. Image should come from Orion CDN server, please upload image using `createImage`, see uploaded images with `listImages`.
+* `video_url` URL to video
+* `video_img_before_url` Image which will be show before video starts.
+* ` video_img_after_url` Image which will be show after video ends.
+
+## Examples 
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+            
+# list adsets
+adsets <- listAdsets()
+ 
+# list images
+images <- listImages()
+ 
+# define ad settings
+body <- list(
+    adset_id = adsets$id[1],
+    name = "testAd",
+    icon_url = images$thumb[1],
+    title = "Download oRion",
+    desc = "Download oRion and interact with Orion from your R console",
+    button_text = buttonText("install"),
+    image_url = images$local_url[1])
+
+# post ad
+createAd(body = body)
+```
+
+# createAdset
+
+Create an adset.
+
+## Arguments 
+
+* `body` body of request that includes adset settings. See examples and details.
+
+## Details 
+
+Valid adset settings (`body`):
+
+* `campaign_id` The campaign id which the ad set is to belongs to
+* `audience_create_way` 
+    - if `0`: Create audience targeting parameters directly. Audience should be along with this API if choose this 
+    - if `1`: Create audience targeting by a template. Note: Once audience created, any changes made on the template will not affect this audience.
+* `audience_template_id` Required when `audience_create_way` = `1` or `2`.
+* `bid_type` Use output of `bidType` to generate otherwise, 
+    * `1`: Install (CPI) [Only for KA user], 
+    * `3`: Click (CPC), \code{4} Impressions (CPM)
+* `app_show_type` Use output of `appShowType` to generate otherwise, 
+    * `50000`: Native News Feed, 
+    * `50001`: Mini Native News Feed, 
+    * `50003`: Video Ad, 
+    * `50008`: App Locker Ad
+* `name` Ad set name (unique)
+* `unit_price` Unit Price. Amount you want to spend to pay per click (CPC) or per 1,000 impressions (CPM)
+* `click_url` Click URL, protocol is required (http://, https://).
+* `deeplink` Deep link is the ability to link into a specific page or function inside of your app, making an app linkable just like a web site. If you are only targeting people who already installed your app, you do not need to add deferred deep linking. Used when the objective of campaign which ad set belonged to is "Get App Reengagement" (`objective` = `4`)
+#* `imp_url` Impression Tracking. An Impression tracking is an optional URL that allows you to track how many people viewed your ads through third-party tracking system, and our system supported macro is Gaid, e.g. http://host/imp?gaid={gaid}. Used when the bid type is "CPM" `bid_type = 4`
+* `budget_lifetime` Your budget is the maximum amount you want to spend. If you choose lifetime, the amount you enter is the maximum you'll spend during the lifetime of your ad set. At least one of `budget_daily` and `budget_lifetime` is filled.
+* `budget_daily` Your budget is the maximum amount you want to spend. If you choose Per Day, the amount you enter is the maximum you'll spend each day. At least one of `budget_daily` and `budget_lifetime` is filled.
+* `start_time` Start time for the adset (i.e.: `2015-09-09 10:10`)
+* `end_time` End time for the adset (i.e.: `2015-09-09 10:10`)
+* `ad_scheduling` Your ad set will either run continuously within some days or within some hours range you select. (JSON) i.e.: `{1:[1,2],7:[1,2,23]}`
+* `delivery_type` Standard delivery is recommended and the preferred option for most advertisers. Accelerated delivery can be useful for promoting time-sensitive events and quickly reaching a target audience. Use `deliveryType` to generate otherwise, 
+    - `0`: Standard delivery, 
+    - `1`: Accelerated delivery. 
+* `target_cpi` Target CPI. Only for KA user. `3`: Click (CPC)
+* `freq_type` Frequency Capping type. Frequency capping controls frequency capping of the ad set per user. 
+* `freq_times` Frequency Capping type. Frequency capping controls frequency capping of the ad set per user.
+* `country` Audience country code. Narrow your potential audience to the people in those countries. Using '|' separated if more than one country. i.e.: `US|ID|CN`. See function `dictCountry`
+* `language` Audience language code, i.e.:`en` see function `dictLanguage`
+* `gender` Use `gender` function to generate otherwise, 
+    * `0`: All, 
+    * `1`: Male, 
+    * `2`: Female
+* `age` Audience age. Use `age` function to generate otherwise, 
+    * `1`: 18-24, 
+    * `2`: 25-30, 
+    * `3`: 32-40, 
+    * `4`: 41+.
+* `interest` Audience interest. Reach users based on their specific interests. See `dictInterest` function.
+* `behavior` Audience behavior. Reach users based on app usage and other behaviors. See `dictBehaviour` function
+* `device_brand` Audience device brand. See `dictDevice` function.
+* `min_device_os` Min OS version of audience used, blank for unrestricted. See `dictOS` function
+* `max_device_os` Max OS version of audience used, blank for unrestricted. See `dictOS` function
+* `net_type` Use `netType` to generate otherwise, 
+    * `0`: All, 
+    * `1`: Wifi, 
+    * `2`: 2G/3G/4G
+* `dsp_url` Bid request url of DSP when this pre-targeting condition meets.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+ 
+# list of campaigns
+camps <- listCampaigns()
+
+# list of audience templates
+audiences <- listAudiences()
+                                                
+# create adset using random template, in random campaign
+createAdset(body = list(
+   name = "testAdset",
+   bid_type = bidType("cpi"),
+   unit_price = 1000,
+   budget_lifetime = 10000,
+   campaign_id = sample(camps$id, 1),
+   audience_create_way = 2,
+   app_show_type = appShowType("newsfeed"),
+   audience_template_id = sample(audiences$id, 1),
+   click_url = "http://app.adjust.io"))
+```
+
+# createAudience
+
+Create an audience targeting template.
+
+## Arguments
+
+* `body` body of request that includes audience targeting template settings. See examples and details.
+
+## Details
+
+Valid audience target template settings (`body`): 
+
+* `audience_template_name` Audience targeting template name (unique). 
+* `audience_template_desc` Description for the audience targeting template. 
+* `country` Audience country code. Narrow your potential audience to the people in those countries. Using '|' separated if more than one country. i.e.: `US|ID|CN`, typically returned by `dictCountry` function.
+* `language` Audience language code, i.e.: `en`, typically returned by `dictLanguage` function
+* `gender` Use `gender` function to generate otherwise, 
+    - `0`: All, 
+    - `1`: Male, 
+    - `2` Female
+* `age` Audience age. Use `age` function to generate otherwise, 
+    - `1`: 18-24, 
+    - `2`: 25-30, 
+    - `3`: 32-40, 
+    - `4`: 41+.
+* `interest` Audience interest. Reach users based on their specific interests, typically returned by `dictInterest` function
+* `behavior` Audience behavior. Reach users based on app usage and other behaviors, typically returned by `dictBehaviour` function
+* `device_brand` Audience device brand, typically returned by `dictDevice` function
+* `min_device_os` Min OS version of audience used, blank for unrestricted, typically returned by `dictOS` function
+* `max_device_os` Max OS version of audience used, blank for 
+unrestricted, typically returned by `dictOS` function
+* `net_type` Use `netType` function to generate otherwise, 
+    - `0`: All, 
+    - `1`: Wifi, 
+    - `2`: 2G/3G/4G
+* `dsp_url` Bid request url of DSP when this pre-targeting 
+condition meets.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+
+# pick two random countries                       
+locations <- paste0(sample(dictCountry()$code, 1), "|", 
+                    sample(dictCountry()$code, 1))
+
+# create audience                         
+createAudience(body = list(
+   audience_template_name = "test",
+   audience_template_desc = "test template",
+   country = locations, 
+   language = sample(dictLanguage()$code, 1),
+   net_type = netType("wifi")),
+   interest = dictInterst()$pid[1])
+   
+# retrieve audience
+aud <- listAudiences(n = 100)
+```
+
+# createCampaign
+
+Create a campaign.
+
+## Arguments
+
+* `body` Body of request that includes campaigns settings. See examples and details.
+
+## Details
+Valid ad settings (`body`):
+
+* `name` Campaign name should be unique under the same user account.
+* `budget_type` can take either `daily` or `lifetime, see `budgetType` function.
+* `budget_daily` Required when `budget_type` equals to `daily`
+* `budget_lifetime` Required when `budget_type` equals to `lifetime`
+* `pkg_name` App package name or website domain
+* `objective` Use `objective` function to generate, otherwise, 
+    - `1`: Drive App Installs, 
+    - `2`: Drive Mobile Site Traffic, 
+    - `3`: Build Brand Awareness, 
+    - `4`: Get App Re-engagement, 
+    - `5`: Get Video Views
+* `app_type` Use `appType` function to generate, otherwise, 
+    - `1`: Game, 
+    - `2`: App
+* `web_type` Use `webType` function to generate, otherwise, if objective == `2`.
+    - `0`: None, 
+    - `1`: Ordinary Website, 
+    - `2`: E-commerce Website, 
+    - `3`: Game Website
+* `landing_page` Use `landingPage` function to generate, otherwise, if objective == `3`: 
+    - `1`: Redirect to Google Play, 
+    - `2`: Website
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# set body of request
+camp <- list(name = "test",
+             budget_type = "daily",
+             budget_daily = "1000", 
+             pkg_name = "someting.test.com",
+             objective = objective("installs"), 
+             app_type = "2",
+             web_type = "1", 
+             landing_page = landingPage("googlePlay"))
+
+# create campaign            
+createCampaign(body = camp)
+```
+
+# createImage
+ 
+Upload an image
+
+## Arguments 
+
+* `file` Image data, supports JPEG, GIF and PNG.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+
+# upload image            
+createImage(file = paste0(.libPaths(), "/png/img/Rlogo.png"))
+```
+
+# createObject
+
+Create any object, see details.
+
+## Arguments 
+
+* `body` Body of request that includes campaigns settings. See examples.
+* `object` Object to be created, see details for valid values.
+
+## Details
+
+`createObject` can essentially replace any other create-family functions. See examples.
+
+Valid values for \code{object}: 
+
+* `audience`, see `createAudience` function for details.
+* `campaign`, see `createCampaign` function for details.
+* `adset`, see `createAdset` function for details.
+* `ad`, see `createAd` function for details.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# set body of request for campaign
+camp <- list(name = "test",
+             budget_type = "daily",
+             budget_daily = "1000", 
+             pkg_name = "test",
+             objective = objective("traffic"), 
+             app_type = appType("game"),
+             web_type = webType("game"), 
+             landing_page = "2")
+
+# create campaign             
+new_camp <- createObject(body = camp, object = "campaign")
+
+# equivalent to
+# new_camp <- createCampaign(body = camp)
+
+showCampaign(campaign.id = new_camp$id)
+```
+
+# deleteAd
+
+Delete an ad.
+
+## Arguments
+
+* `ad.id` id of ad to delete
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list adsets
+adsets <- listAdsets()
+
+# list images
+images <- listImages()
+
+# create an ad
+# define ad settings
+body <- list(
+   adset_id = adsets$id[1],
+   name = "My Ad",
+   icon_url = images$thumb[1],
+   title = "Ad Title",
+   desc = "Ad description",
+   button_text = buttonText("install"),
+   image_url = images$local_url[1])
+   
+# post ad
+ad <- createAd(body = body)
+
+# delete the ad
+deleteAd(ad.id = ad$id)
+```
+
+# deleteAdset
+
+Delete an adset.
+
+## Arguments
+
+* `adset.id` id of object to delete
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list of campaigns
+camps <- listCampaigns()
+           
+# list of audience templates
+audiences <- listAudiences()
+                                                
+# create adset using random template, in random campaign
+adset <- createAdset(body = list(
+   name = "My Adset",
+   bid_type = bidType("CPI"),
+   unit_price = 1000,
+   budget_lifetime = 10000,
+   campaign_id = sample(camps$id, 1),
+   audience_create_way = 2,
+   app_show_type = appShowType("newsfeed"),
+   audience_template_id = sample(audiences$id, 1),
+   click_url = "http://app.adjust.io"))
+
+# delete random adset
+deleteAdset(adset.id = adset$id)
+```
+
+# deleteAudience
+
+Delete audience targeting template.
+
+## Arguments
+
+* `audience.id` id of object to delete
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list audiences
+audiences <- listAudiences()
+
+# delete random aduience template
+deleteAudience(audience.id = sample(audiences$id, 1))
+```
+
+# deleteCampaign
+
+Delete a campaign.
+
+## Arguments
+
+* `campaign.id` id of object to delete
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# set body of request
+camp <- list(name = "My Campaign",
+             budget_type = "daily",
+             budget_daily = "1000", 
+             pkg_name = "someting.test.com",
+             objective = objective("installs"), 
+             app_type = "2",
+             web_type = "1")
+
+# create campaign            
+campaign <- createCampaign(body = camp)
+
+# delete random campaign
+deleteCampaign(campaign.id = campaign$id)
+```
+
+# deleteObject
+
+Delete campaign, adsets, ads or audience templates, see details and examples.
+
+## Arguments
+
+* `object` Object to be deleted, see details for valid values
+* `id` id of object to delete
+
+## Details
+
+`deleteObject` can essentially replace any other delete-family functions. See examples.
+
+Valid values for `object`: 
+
+* `audience`, see deleteAudience` function for details.
+* `campaign`, see `deleteCampaign` function for details.
+* `adset`, see `deleteAdset` function for details.
+* `ad`, see `deleteAd` function for details.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list ads
+ads <- listObjects(object = "ad")
+
+# delete
+# set seed for reproducibility
+set.seed(19880525)
+
+# delete random ad
+deleteObject(object = "ad", id = sample(ads$id, 1))
+
+# the above is equivalent to
+# deleteAd(ad.id = sample(ads$id, 1))
+```
+
+# dictBehaviour
+
+Fetch list of behaviours.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict behaviours
+(behaviours <- dictBehaviour())
+
+# create target audience template 
+createAudience(body = list(
+               audience_template_name = "target game addicts",
+               behavior = behaviours$code[1]
+               ))
+```
+
+# dictCity
+
+Fetch list of cities.
+
+## Arguments
+
+* `state.code` Code of country as returned by `dictState` function, see examples.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+
+# dict states of random country
+states <- dictState(country.code = "US")
+
+# dict cities
+cities <- dictCity(state.code = sample(states$code, 1))
+```
+
+# dictCountry
+
+Fetch list of countries.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict countries
+countries <- dictCountry()
+
+# create audience with country settings
+createAudience(body = list(
+               audience_template_name = "countries",
+               country = paste0(countries$code[1:5], collapse="|")
+               ))
+```
+
+# dictDevice
+
+Fetch list of device models.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict mobile devices
+(devices <- dictDevice())
+
+# create audience with device setting
+createAudience(body = list(
+               audience_template_name = "target specific device users",
+               device_brand = sample(devices$id, 1)
+               ))
+```
+
+# dictInterest
+
+Fetch list of interests.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict interests
+head(int <- dictInterest())
+
+# filter transportation-related interests
+trans <- int[grep("Transportation", int$value),]
+
+# create target audience template 
+createAudience(body = list(
+               audience_template_name = "target specific interests",
+               interest = trans$pid[1]
+               ))
+```
+
+# dictLanguage
+
+Fetch list of languages.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict languages
+head(lang <- dictLanguage())
+
+# filter russian language code
+russian <- subset(lang, value == "Russian")$code
+
+# create audience
+createAudience(body= list(
+               audience_template_name = "target Russian speakers",
+               language = russian))
+```
+
+# dictOS
+
+Fetch list of OS versions.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict os versions
+versions <- dictOS()
+
+# create audience
+createAudience(body = list(
+               audience_template_name = "target android >= 3.0",
+               min_device_os = versions[versions$value == "3.0", ]
+               ))
+```
+
+
+# dictState
+
+Fetch list of states.
+
+## Arguments
+
+* `country.code` Code of country as returned by `dictCountry`, see examples.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# dict countries
+country <- dictCountry()
+
+# dict states of random country
+states <- dictState(country.code = sample(country$code, 1))
+
+# dict US states
+us <- dictState(country.code = "US")
+
+# filter states starting with A (because why not?)
+a_states <- us[grep("^A", us$value),]
+
+# create audience
+createAudience(body = list(
+               audience_template_name = "A-states",
+               country = "US",
+               region = paste0(a_states$code, collapse="|")))
+```
+
+# getReport
+
+Fetch data.
+
+## Arguments
+
+* `column` Variables to retrieve, see details for valid values. Defaults to `c("impression", "click")`. Must pass  at least 2 values (vector of length >= 2). Required.
+* `group.by` How to breakdown the data, see details for valid values. Defaults to `c("datetime", "campaign")`. Must pass at least 2 values (vector of length >= 2). Required.
+* `start` Start date (`YYYY-MM-DD`). Required.
+* `end` End date (`YYYY-MM-DD`), defaults to `Sys.Date()`. Required.
+* `action` target node, currently only supports `"advertiser"` 
+ (default).
+* `filter` Defaults to `NULL`. Optional.
+
+## details 
+
+The official documentation can be found [here](http://api.ori.cmcm.com/doc/#api-Report-Report_API).
+
+Valid values for `column`:
+
+* `impression`
+* `click`
+* `conversion`
+* `revenue`
+* `ctr`
+* `cpm`
+
+Valid values for `group.by`:
+
+* `age`
+* `gender`
+* `location`
+* `brand`
+* `ad`
+* `adset`
+* `campaign`
+* `videotype`
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000, 
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# get daily campaign impressions and conversions for the past 7 days
+dat <- getReport(column = c("impression", "conversion"), 
+                 group.by = c("datetime", "campaign"), 
+                 start = Sys.Date() - 7)
+```
+
+# helpers
+
+These functions attempt to facilitate setting up campaigns, adsets, 
+ads and audience targeting templates by allowing to pass more readable 
+settings.
+
+## Functions
+
+* `age`
+* `appShowType`
+* `appType`
+* `audienceCreation`
+* `bidType`
+* `budgetType`
+* `buttonText`
+* `deliveryType`
+* `gender`
+* `helpers`
+* `landingPage`
+* `netType`
+* `objective`
+* `switchIt`
+* `webType`
+
+## Arguments
+
+* `x` Setting to convert
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# settings with helpers
+settings  <- list(name = "test",
+                  budget_type = budgetType("daily"),
+                  budget_daily = "1000", 
+                  pkg_name = "test.com",
+                  objective = objective("installs"), 
+                  app_type = appType("game"),
+                  web_type = webType("ecommerce"), 
+                  landing_page = landingPage("googlePlay"))
+                  
+# settings WITHOUT helpers
+nohelpers  <- list(name = "test",
+                   budget_type = "daily",
+                   budget_daily = "1000", 
+                   pkg_name = "test.com",
+                   objective = "1", 
+                   app_type = "1",
+                   web_type = "2", 
+                   landing_page = "1")
+
+identical(settings, nohelpers)  
+                 
+# create campaign
+createCampaign(body = settings)
+```
+
+# listAds 
+
+List ads under the authenticated account.
+
+## Arguments
+
+* `n`	Number of ads to retrieve, defaults to `50`
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+
+(ads <- listAds(n = 100))
+```
+
+# listAdsets
+
+List of adsets under the authenticated account.
+
+## Arguments
+
+* `n` Number of adsets to retrieve, defaults to `50`
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+(adsets <- listAdsets(n = 50))
+```
+
+# listAudiences
+
+List of audience templates under the authenticated account.
+
+## Arguments
+
+* `n` Number of audience templates to retrieve, defaults to `50`
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+(aud <- listAudiences(n = 50))
+```
+
+# listCampaigns
+
+List of campaigns under the authenticated account.
+
+## Arguments
+
+* `n` Number of campaigns to retrieve, defaults to `50`
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+head(camps <- listCampaigns(n = 100))
+```
+
+# listImages
+
+List of images under the authenticated account.
+
+## Arguments
+
+* `n` Number of images to retrieve, defaults to `50`
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+(images <- listImages())
+```
+
+# listObjects
+
+List any objects from the API, see details for valid values.
+
+## Arguments
+
+* `n` Number of objects to retrieve, defaults to `50`
+
+## Details
+
+* `image`, see `listImages` function for details.
+* `audience`, see `listAudiences` function for details.
+* `campaign`, see `listCampaigns` function for details.
+* `adset`, see `listAdsets` function for details.
+* `ad`, see `listAds` function for details.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list campaigns with listCampaigns
+camps <- listCampaigns()
+
+# list campaigns with listObjects
+obj <- listObjects(object = "campaign")
+
+# identical results
+identical(camps, obj)
+```
+
+# map
+
+Visualise your account.
+
+## Arguments
+
+* `campaigns` Data frame of campaigns as returned by `listCampaigns` function
+* `adsets` Data frame of campaigns as returned by `listAdsets` function
+* `ads` Data frame of campaigns as returned by `listAds` function
+* `audiences` Data frame of campaigns as returned by `listAudiences` function
+
+## Details
+
+Maps the network of object under the authenticated user, follows 
+the typical advertising structure.
+
+1. User
+2. Campaigns
+3. Adsets
+4. Ads & Audiences
+
+Under the authenticated user are campaigns, under campaigns lie adsets to 
+which audience targeting templates and ads belong.
+
+## Return
+
+Edge list of objects in the authenticated user's account, to help one visualise campaigns, adsets, ads and audience templates.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list required objects
+ads <- listAds(n = 500)
+adsets <- listAdsets(n = 500)
+campaigns <- listCampaigns(n = 500)
+audiences <- listAudiences(n = 500)
+
+network <- map(campaigns, adsets, ads, audiences)
+
+# plot with igraph
+# plot ids
+g <- igraph::graph.data.frame(network[,1:2], directed = TRUE)
+plot(g)
+
+# plot names
+g <- igraph::graph.data.frame(network[,3:4], directed = TRUE)
+plot(g)
+
+# plot with networkd3
+networkD3::simpleNetwork(Data = network, Source = "source.name", 
+                         Target = "target.name")
+```
+
+# orionOAuth
+
+Authenticate the Orion API.
+
+## Arguments
+
+* `client.id` Your `client_id`
+* `client.secret` Your `client_secret`
+* `grant.type` Currently only supports `client_credentials` (default)
+* `save` If `TRUE` will save the token for future sessions, default to `FALSE`
+
+## Details 
+Please see the [official documentation](http://api.ori.cmcm.com/doc/#api-Auth-access_token) to apply for the API and get your `client_id` and `client_secret`: [api.ori.cmcm.com/doc/#api-Auth-access_token](api.ori.cmcm.com/doc/#api-Auth-access_token). If the token is stored (`save = TRUE`) then `orionOAuth` does not need to be run in future sessions, see example.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# test
+camp_oauth <- listCampaigns()
+           
+# authenticate and save
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0", 
+           save = TRUE)
+           
+# detach and unload package
+detach("package:oRion", unload = TRUE)
+
+# no oauth
+library(oRion)
+camp_noauth <- listCampaigns()
+
+identical(camp_oauth, camp_noauth)
+```
+
+# showAd
+
+Retrieve settings of a specfic ad.
+
+## Arguments
+
+* `ad.id` id of ad to retrieve
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list ads
+ads <- listAds(n = 100)
+
+# fetch random adset settings
+(ad <- showAd(ad.id = sample(ads$id, 1)))
+```
+
+# showAdset
+
+Retrieve settings of a specfic adset.
+
+## Arguments
+
+* `adset.id` id of adset to retrieve
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list adsets
+adsets <- listAdsets(n = 100)
+
+# fetch random adset settings
+(adset <- showAdset(adset.id = sample(adsets$id, 1)))
+```
+
+# showAdsetAudience
+
+Retrieve the audience templates under a specific adset.
+
+## Arguments
+
+* `adset.id` id of adset to retrieve
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list 50 adsets
+adsets <- listAdsets(n = 50)
+
+# show audience template of random adset
+audience <- showAdsetAudience(adset.id = sample(adsets$id, 1))
+```
+
+# showCampaign
+
+Retrieve the audience templates under a specific adset.
+
+## Arguments
+
+* `campaign.id` id of campaign to retrieve
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list campaigns
+camps <- listCampaigns(n = 100)
+
+# fetch random campaign settings
+(camp <- showCampaign(campaign.id = sample(camps$id, 1)))
+```
+
+# showObject
+
+Retrieve settings of an object, see details.
+
+## Arguments
+
+* `object` Object to retrieve, see details for valid values.
+* `id` id of object to retrieve.
+
+## Details
+
+`showObject` can essentially replace any other show-family functions a the execption of `showAdsetAudience`. 
+See examples.
+
+Valid values for `object`:
+
+* `audience` see `showAudience` function for details.
+* `campaign` see `showCampaign` function for details.
+* `adset` see `showAdset` function for details.
+* `ad` see `showAd` function for details.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list ads
+ads <- listObjects(object = "ad", n = 100)
+
+# fetch first ad
+ad <- showObject(object = "ad", id = ads$id[1])
+
+# list campaigns
+campaigns <- listObjects(object = "campaign")
+
+# fetch random campaign
+campaign <- showObject(id = campaigns$id[1])
+
+# equivalent to 
+campaign2 <- showCampaign(campaign.id = campaigns$id[1])
+
+identical(campaign, campaign2)
+```
+
+# updateAd
+
+Update ad settings, see details and example.
+
+## Arguments
+
+* `ad.id` id of ad to update
+* `body` Body of request that includes ad settings. See examples 
+and details.
+
+## Details
+
+Valid values for `body`:
+
+* `switch`  Ad switch, use `switchIt` function otherwise, 
+    * `1`: On, 
+    * `0`: Off.
+* `name` Ad name, unique.
+* `icon_url` Logo image url. Must be larger than 84*84 px and have 
+an aspect ratio of 1:1, in JPG or PNG format. File must not exceed 100KB.
+* `title` Ad headline
+* `desc` Description tells people a bit more about your Application. Make sure to clearly explain what you are promoting.
+* `button_text` Button display text, use `buttonText` function to generate otherwise, 
+    * `1`: Download, 
+    * `2`: Install, 
+    * `3`: Check, 
+    * `4`: Free, 
+    * `5`: Play, 
+    * `6`: Buy, 
+    * `7`: More.
+* `image_url` Image url. Must be larger than 600\*314 px and have an aspect ratio of 1.9:1. Best is 1200\*628 px, JPG or PNG format. File size must not exceed 500KB. Image should come from Orion CDN server, please upload image using `createImage` function.
+* `video_url` URL to video
+* `video_img_before_url` Image which will be show before video starts.
+* `video_img_after_url` Image which will be show after video ends.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list ads
+ads <- listAds()
+
+# update ad name
+update <- updateAd(ad.id = ad$id[1], body = list(
+               switch = switch("off"), 
+               name = "New Ad Name - Paused"))
+               
+# show updated campaign
+showAd(ad.id = ads$id[1])
+```
+
+# updateAdset
+
+Update adset settings, see details and example.
+
+## Arguments
+
+* `adset.id` id of adset to update
+* `body` Body of request that includes adset settings. See examples 
+and details.
+
+## Details
+
+Valid values for `body`:
+
+* `switch` Ad switch, use `switchIt` function otherwise, 
+    * `1`: On, 
+    * `0`: Off.
+* `name` Ad set name (unique)
+* `unit_price` Unit Price. Amount you want to spend to pay per click 
+(CPC) or per 1,000 impressions (CPM)
+* `click_url` click_url, protocol is required (http://, https://).
+* `deeplink` Deep link is the ability to link into a specific page or function inside of your app, making an app linkable just like a web site. If you are only targeting people who already installed your app, you do not need to add deferred deep linking. Used when the objective of campaign which ad set belonged to is "Get App Reengagement" (`objective = 4`)
+* `imp_url` Impression Tracking. An Impression tracking is an optional URL that allows you to track how many people viewed your ads through third-party tracking system, and our system supported macro is Gaid, e.g. http://host/imp?gaid={gaid}. Used when the bid type is "CPM" `bid_type = 4`
+* `budget_lifetime` Your budget is the maximum amount you want to spend. If you choose lifetime, the amount you enter is the maximum you'll spend during the lifetime of your ad set. At least one of `budget_daily` and `budget_lifetime` is filled.
+* `budget_daily` Your budget is the maximum amount you want to spend. If you choose Per Day, the amount you enter is the maximum you'll spend each day. At least one of "budget\_daily" and "budget\_lifetime" is filled.
+* `start_time` Start time for the adset (i.e.: `2015-09-09 10:10`)
+* `end_time` End time for the adset (i.e.: `2015-09-09 10:10`)
+* `ad_scheduling` Your ad set will either run continuously within some days or within some hours range you select. (`JSON`) i.e.: `{1:[1,2],7:[1,2,23]` function
+* `delivery_type` Standard delivery is recommended and the preferred option for most advertisers. Accelerated delivery can be useful for promoting time-sensitive events and quickly reaching a target audience. Use `deliveryType` function to generate otherwise, 
+    * `0`: Standard delivery, 
+    * `1`: Accelerated delivery. 
+* `target_cpi` Target CPI. Only for KA user. `3`: Click (CPC)
+* `freq_type` Frequency Capping type. Frequency capping controls frequency capping of the ad set per user. 
+* `freq_times` Frequency Capping type. Frequency capping controls frequency capping of the ad set per user.
+* `country` Audience country code. Narrow your potential audience to the people in those countries. Using '|' separated if more than one country. i.e.: `US|ID|CN`. See `dictCountry` function
+* `language` Audience language code, i.e.: `en` see `dictLanguage` function
+* `gender` Use `gender` function to generate otherwise, 
+    * `0`: All, 
+    * `1`: Male, 
+    * `2` Female
+* `age` Use `age` function to generate otherwise, Audience age. 
+    * `1`: 18-24, 
+    * `2`: 25-30, 
+    * `3`: 32-40, 
+    * `4`: 41+.
+* `interest` Audience interest. Reach users based on their specific interests. See `dictInterest` function
+* `behavior` Audience behaviour. Reach users based on app usage and other behaviors. See `dictBehaviour` function
+* `device_brand` Audience device brand. See `dictDevice` function
+* `min_device_os` Min OS version of audience used, blank for unrestricted. See `dictOS` function
+* `max_device_os` Max OS version of audience used, blank for unrestricted. See `dictOS` function
+* `net_type` Use `netType` function to generate otherwise, 
+    * `0`: All, 
+    * `1`: Wifi, 
+    * `2`: 2G/3G/4G
+* `dsp_url` Bid request url of DSP when this pre-targeting condition meets.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list adsets
+adsets <- listAdsets()
+
+# update adset name
+update <- updateCampaign(adset.id = adsets$id[1], body = list(
+               switch = switchIt("on"), 
+               name = "New adset Name - Running"))
+               
+# show updated campaign
+showAdset(adset.id = adsets$id[1])
+```
+
+# updateAudience
+
+Update audience targeting template settings, see details and example.
+
+## Arguments
+
+* `audience.id` id of audience to update
+* `body` Body of request that includes audience template settings. See examples and details.
+
+## Details
+
+Valid values for `body`: 
+
+* `audience_template_name` Audience targeting template name (unique). 
+* `audience_template_desc` Description for the audience targeting template. 
+* `country` Audience country code. Narrow your potential audience to the people in those countries. Using '|' separated if more than one country. i.e.: `US|ID|CN`, typically returned by `dictCountry` function
+* `language` Audience language code, i.e.: `en`, typically returned by `dictLanguage` function
+* `gender` Use `gender` function to generate otherwise, 
+    * `0`: All, 
+    * `1`: Male, 
+    * `2` Female
+* `age` Audience age. Use `age` function to generate otherwise, 
+    * `1`: 18-24, 
+    * `2`: 25-30, 
+    * `3`: 32-40, 
+    * `4`: 41+.
+* `interest` Audience interest. Reach users based on their specific interests, typically returned by `dictInterest` function
+* `behavior` Audience behavior. Reach users based on app usage and other behaviors, typically returned by `dictBehaviour` function
+* `device_brand` Audience device brand, typically returned by `dictDevice` function
+* `min_device_os` Min OS version of audience used, blank for unrestricted, typically returned by `dictOS` function
+* `max_device_os` Max OS version of audience used, blank for unrestricted, typically returned by `dictOS` function
+* `net_type` Use `netType` function to generate otherwise, 
+    * `0`: All, 
+    * `1`: Wifi, 
+    * `2`: 2G/3G/4G
+* `dsp_url` Bid request url of DSP when this pre-targeting condition meets.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list audiences
+audiences <- listAudiences()
+
+# update audience name
+update <- updateAudience(audience.id = audiences$id[1], body = list(
+               audience_template_name = "New Audienced Name",
+               audience_template_desc = "New Description"))
+               
+# show updated campaign
+showAudience(audience.id = audiences$id[1])
+```
+
+# updateCampaign
+
+Update campaign settings, see details and example.
+
+## Arguments
+
+* `campaign.id` id of campaign to update`
+* `body` Body of request that includes campaigns settings. See examples 
+and details.
+
+## Details
+
+Valid values for `body`:
+
+* `switch` Ad switch, use `switchIt` function otherwise, 
+    * `1`: On, 
+    * `0`: Off.
+* `name` Campaign name should be unique under the same user account.
+* `budget_type` can take either `daily` or `lifetime`, see `budgetType` function.
+* `budget_daily` Required when `budget_type` equals to `daily`
+* `budget_lifetime` Required when `budget_type` equals to `lifetime.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+           
+# list campaigns
+camps <- listCampaign()
+
+# update campaign name
+update <- updateCampaign(campaign.id = camps$id[1], body = list(
+                         switch = 0, 
+                         name = "New campaign Name"))
+               
+# show updated campaign
+showCampaign(campaign.id = camps$id[1])
+```
+
+# updateObject
+
+Update any object, see details and example.
+
+## Arguments
+
+* `object` Object to be updated, see details for valid values.
+* `body` Body of request that includes campaigns settings. See examples.
+* `id` id of object to update
+
+## Details
+
+* `audience` see `updateAudience` function for details.
+* `campaign` see `updateCampaign` function for details.
+* `adset` see `updateAdset` function for details.
+* `ad` see `updateAd` function for details.
+
+## Examples
+
+```R
+# authenticate
+orionOAuth(client.id = 0000,
+           client.secret = "0x00000000x00x0x000xxx0000x0xx0")
+
+# list current adsets
+adsets <- listAdsets()
+
+# new settings                       
+settings <- list(switch = switchIt("on"), name = "New Adset Name")
+
+# update adset
+update <- updateObject(object = "adset", adset.id = adsets$id[1], 
+                       body = settings)
+
+# equivalent to
+# update <- updateAdset(adset.id = adsets$id[1], body = settings)
+
+# fetch updated list
+adsets <- listAdsets()
+```
