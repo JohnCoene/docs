@@ -1,0 +1,633 @@
+---
+title: "youTubeDataR"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r knitr_init, echo=FALSE, cache=FALSE, warning=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=FALSE,
+	             cache=TRUE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=75)
+```
+
+# findParams
+
+Helper function to retrieve valid values for parameters.
+
+## Arguments
+
+* `param` Parameter to retrieve
+
+## Details
+
+Given the pletoric number of parameters a this helper function is provided. Please see the [official documentation](https://developers.google.com/youtube/v3/docs/search/list) for more information. Note that all parameters (i.e.: `channel.id`) cannot, by nature, be tested.
+
+Valid parameters:
+
+* `order`
+* `video.dimension`
+* `video.caption`
+* `video.duration`
+* `video.definition`
+* `video.embeddable`
+* `video.syndicated`
+* `video.license`
+* `video.type`
+* `safe.search`
+* `event.type`
+* `channel.type`
+* `type`
+* `text.format`
+* `moderation.status`
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# find valid values for video.dimension
+dims <- findParams(param = "video.dimension")
+
+# set seed for reproducability
+set.seed(19880525)
+
+# fetch data using parameter
+cats <- searchVideos(token, query = "cats", 
+                     video.dimension = sample(dims, 1))
+```
+
+# findParts
+
+Helper function to retrieve valid values for `part`.
+
+## Arguments
+
+* `FUN` Function to retrieve the valid `part`.
+
+## Details
+
+Valid values for `FUN`:
+
+* `getActivities`
+* `getCaptions`
+* `getChannels`
+* `getChannelSections`
+* `getComments`
+* `getCommentThreads`
+* `getPlaylistItems`
+* `getPlaylists`
+* `getSubscriptions`
+* `getVideos`
+
+Alternatively see `scope` in `youOAuth` function.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+                  
+# search channels about cats
+search <- searchTube(token, query = "cats", type = "channel")
+
+# random channel id
+set.seed(19880525)
+chan <- sample(search$id.channelId, 1)
+
+# get valid part
+p <- findParts(FUN = "getActivities")[1]
+
+# fetch data
+act <- getActivities(token, channel.id = chan, part = p)
+```
+
+# getActivities
+
+Returns a list of caption tracks matching a specific critera.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `channel.id` Indicates that the API response should only contain resources created by the channel.
+* `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, can take any of `contentDetails`, `id` or `snippet`. See `findParts` function.
+* `n` Number of results to fecth. The default value is `50`.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `mine` Set this parameter's value to true to retrieve a feed of the authenticated user's activities. The default value is `FALSE`.
+* `home` Set this parameter's value to true to retrieve the activity feed that displays on the YouTube home page for the currently authenticated user. The default value is `FALSE`.
+* `published.before` Indicates that the API response should only contain resources created before the specified time. Can be either of class `Date` ("%Y-%m-%d") or `POSIXct` or `POSIXlt` with time, or an RFC 3339 formatted date-time value (i.e.: `1970-01-01T00:00:00Z`). The default value is `Sys.time()`.
+* `published.after` Indicates that the API response should only contain resources created after the specified time. Can be either of class `Date` ("%Y-%m-%d") or `POSIXct` or `POSIXlt` with time, or an RFC 3339 formatted date-time value (i.e.: `1970-01-01T00:00:00Z`). The default value is `NULL`.
+* `region.code` Instructs the API to return search results for the specified country. The parameter value is an [ISO 3166-1 alpha-2](http://www.iso.org/iso/country_codes/iso_3166_code_lists/country_names_and_code_elements.htm) country code. The default value is `NULL`. See `getRegions` function.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+                  
+# search channels about cats
+search <- searchTube(token, query = "cats", type = "channel")
+
+# pick random channel id
+set.seed(19880525)
+chan <- sample(search$snippet.id.channelId, 1)
+
+# fetch data
+act <- getActivities(token, channel.id = chan)
+```
+
+# getCaptions
+
+Returns a list of caption tracks that are associated with a specified video.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `video.id` specifies the YouTube video ID of the video for which the API should return caption tracks. Required.
+* `part` specifies the caption resource parts that the API response will include. The default vlaue is `snippet`, can take any of `id` or `snippet`. See `findParts` function.
+* `id` The id parameter specifies a comma-separated list of IDs that identify the caption resources that should be retrieved. Each ID must identify a caption track associated with the specified video. The default value is ``NULL`.
+* `on.behalf.of.content.owner` The `on.behalf.of.content.owner` parameter indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The actual CMS account that the user authenticates with must be linked to the specified YouTube content owner. This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. See scopes under `youOAuth` function. The default value is `NULL`.
+
+## Details
+
+See scope in `youOAuth`. Required authorisation:
+* `force-ssl`
+* `partner-channel-audit`
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+                  
+# search videos about cats
+search <- searchTube(token, query = "cats", type = "video")
+
+# random channel id
+set.seed(19880525)
+vid <- sample(search$snippet.id.videoId, 1)
+
+# fetch data
+act <- getActivities(token, video.id = vid)
+```
+
+# getChannels
+
+Returns a collection of zero or more channel resources that match the request criteria.
+
+## Arguments
+* `token` Your token as returned by `youOAuth` function.
+* `n` Number of results to fecth. The default value is `50`.
+* `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, see `findParts` function or 
+[official documentation](https://developers.google.com/youtube/v3/docs/channels/list) for all valid values.
+* `category.id` Specifies a YouTube guide category, thereby requesting YouTube channels associated with that category. As returned by`getGuideCategories` function. The default value is `NULL`.
+* `for.username` Specifies a YouTube username, thereby requesting the channel associated with that username. The default value is `NULL`.
+* `id` specifies a comma-separated list of the YouTube channel ID(s) for the resource(s) that are being retrieved. In a channel resource, the id property specifies the channel's YouTube channel ID. The default value is `NULL`
+* `managed.by.me` This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. See scopes under `youOAuth` function. Set this parameter's value to true to instruct the API to only return channels managed by the content owner that the `on.behalf.of.content.owner` parameter specifies. The user must be authenticated as a CMS account linked to the specified content owner and `on.behalf.of.content.owner` must be provided.
+* `mine` Set this parameter's value to true to retrieve a feed of the authenticated user's activities. The default value is `FALSE`.
+* `hl` The hl parameter instructs the API to retrieve localized resource metadata for a specific application language that the YouTube website supports. The parameter value must be a language code included in the list returned by `getLanguages` function.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `on.behalf.of.content.owner` Indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The actual CMS account that the user authenticates with must be linked to the specified YouTube content owner. This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. See scope under `youOAuth` function. The default value is `NULL`.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Details
+
+MUST specify at least one of the following:
+
+* `category.id`
+* `for.username`
+* `id`
+* `managed.by.me` (`TRUE`)
+* `mine` (`TRUE`)
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+                  
+# search channels about cats
+search <- searchTube(token, query = "cats", type = "channel")
+
+# pick random id
+set.seed(19880525)
+chan <- sample(search$snippet.id.channelId, 1)
+
+# fetch
+chan.dat <- getChannels(token, id = chan)
+```
+
+# getChannelSections
+
+Returns a list of channelSection resources that match the API request criteria.
+
+# Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `channel.id` Indicates that the API response should only contain resources created by the channel. The default value is `NULL`.
+* `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, can take any of `contentDetails`, `id` or `snippet`. See `findParts` function.
+* `mine` Set this parameter's value to true to retrieve a feed of the authenticated user's activities. The default value is `FALSE`.
+* `id` Specifies a comma-separated list of IDs that uniquely identify the channelSection resources that are being retrieved. In a 
+`getChannelSections` resource, the id property specifies the section's ID.
+* `hl` The hl parameter instructs the API to retrieve localized resource metadata for a specific application language that the YouTube website supports. The parameter value must be a language code included in the list returned by `getLanguages` function
+* `on.behalf.of.content.owner` Indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The actual CMS account that the user authenticates with must be linked to the specified YouTube content owner. This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. See scope under `youOAuth` function. The default value is `NULL`.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Details
+
+Must specify one (and only one) of `mine` (`TRUE`), `id` or `channel.id`.
+
+## Examples
+
+```R
+#Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# search channels on cats
+search <- searchTube(token, query = "cats", type = "channel")
+
+# get channel sections
+sections <- getChannelSections(token, 
+                               channel.id = search$snippet.channelId [1])
+```
+
+# getComments
+
+Returns a list of comments that match the API request parameters. 
+
+## Arguments
+
+* `token Your token as returned by `youOAuth`.
+* `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, can take any of `snippet` or `id`. See `findParts` function.
+* `n` Number of results to fecth. The default value is `50`.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `id` Specifies a comma-separated list of comment IDs for the resources that are being retrieved. In a comment resource, specifies the comment's ID.
+* `parent.id` Specifies the ID of the comment for which replies should be retrieved. Note: YouTube currently supports replies only for top-level comments. However, replies to replies may be supported in the future.
+* `text.format` Indicates whether the API should return comments formatted as HTML or as plain text. The default value is `html`. 
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Details
+
+Must specify one (and only one) of `id` or `parent.id`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+```
+
+# getGuideCategories
+
+Returns a list of categories that can be associated with YouTube channels.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `id` Specifies a comma-separated list of the YouTube channel category ID(s) for the resource(s) that are being retrieved. In a `guide.category` resource, the id property specifies the YouTube channel category ID.
+* `region.code` Instructs the API to return the list of guide categories available in the specified country. The parameter value is an [ISO 3166-1 alpha-2](https://www.iso.org/obp/ui/#search) country code.
+* `hl` Specifies the language that will be used for text values in the API response. The default value (from YouTube) is `en-US`. See `getLanguages` function
+
+## Examples
+
+```R
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# fetch categories from Belgium
+dull.cat <- getCategories(token, region.code = "BE")
+```
+
+# getLanguages
+
+Returns a list of application languages that the YouTube website supports.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `hl` Specifies the language that should be used for text values in the API response. The default value is `en_US`. Optional argument.'
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# fetch languages
+lang <- getLanguages(token)
+```
+
+# getPlaylists
+
+Returns a collection of playlists that match the API request 
+parameters.
+
+## Arguements
+
+* `token` Your token as returned by `youOAuth` function.
+* `part` The part parameter specifies a comma-separated list of one or more activity
+resource properties that the API response will include. The default value is `snippet`, see `findParts` function for all valid values..
+* `n` Number of results to fecth. The default value is `50`.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `channel.id` Indicates that the API should only return the specified channel's playlists.
+* `id` Specifies a comma-separated list of the YouTube playlist ID(s) for the resource(s) that are being retrieved.
+* `mine` This parameter can only be used in a properly authorized request. Set this parameter's value to `TRUE` to instruct the API to only return playlists owned by the authenticated user. 
+* `hl` Instructs the API to retrieve localized resource metadata for a specific application language that the YouTube website supports. The parameter value must be a language code included in the list returned by the `getLanguages` function. The default value is `NULL`.
+* `on.behalf.of.content.owner` This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. Indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The CMS account that the user authenticates with must be linked to the specified YouTube content owner. The default value is `NULL`, must be used in conjonction with `on.behalf.of.content.owner.channel.channel`
+* `on.behalf.of.content.owner.channel` This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. Specifies the YouTube channel ID of the channel to which a video is being added. This parameter is required when a request specifies a value for the `on.behalf.of.content.owner` parameter, and it can only be used in conjunction with that parameter. In addition, the request must be authorized using a CMS account that is linked to the content owner that the `on.behalf.of.content.owner` parameter specifies. Finally, the channel that the `on.behalf.of.content.owner.channel` parameter value specifies must be linked to the content owner that the `on.behalf.of.content.owner` parameter specifies.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+                  
+# search channels about cats
+search <- searchTube(token, query = "cats", type = "channel")
+
+# pick random channel
+set.seed(19880525)
+chan <- sample(search$snippet.id.channelId, 1)
+
+# fetch playlist
+pl <- getPlaylists(token, channel.id = chan)
+```
+
+# getPlaylistItems
+
+Returns a collection of playlist items that match the API request parameters.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, see `findParts` function or [official documentation](https://developers.google.com/youtube/v3/docs/channels/list) for all valid values.
+* `n` Number of results to fecth. The default value is `50`.
+* `id` The id parameter specifies a comma-separated list of one or more unique playlist item IDs.
+* `playlist.id` Specifies the unique ID of the playlist for which you want to retrieve playlist items. Note that even though this is an optional parameter, every request to retrieve playlist items must specify a value for either the id parameter or the `playlist.id` parameter.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `on.behalf.of.content.owner` This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners. Indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The CMS account that the user authenticates with must be linked to the specified YouTube content owner.
+* `video.id` Specifies that the request should return only the playlist items that contain the specified video.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# search playlists
+search <- searchTube(token, query = "cats", type = "playlist")
+
+# sample playlist id
+id <- sample(search$id.playlistId, 1)
+
+# fetch
+items <- getPlaylistItems(token, playlist.id = id)
+```
+
+# getRegions
+
+Returns a list of application languages that the YouTube website supports.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `hl` Specifies the language that should be used for text values in the API response. The default value is `en_US`. Optional argument.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# fetch languages
+regions <- getRegions(token)
+```
+
+# getSubscriptions
+
+Returns subscription resources that match the API request criteria.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, see `findParts` function for all valid values.
+* `n` Number of results to fecth. The default value is `50`.
+* `mine` Set this parameter's value to true to retrieve a feed of the authenticated user's subscriptions. The default value is `FALSE`
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `for.channel.id` Specifies a comma-separated list of channel IDs. The API response will then only contain subscriptions matching those channels.
+* `id` Specifies a comma-separated list of the YouTube subscription ID(s) for the resource(s) that are being retrieved. In a subscription resource, the id property specifies the YouTube subscription ID.
+* `order` Specifies the method that will be used to sort resources in the API response. The default value is `relevance`, see `findParams` function.
+* `channel.id` Specifies a YouTube channel ID. The API will only return that channel's subscriptions.
+* `my.subscriber` This parameter can only be used in a properly authorized request. Set this parameter's value to `TRUE` to retrieve a feed of the subscribers of the authenticated user.
+* `on.behalf.of.content.owner` This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners.Indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The CMS account that the user authenticates with must be linked to the specified YouTube content owner. The default value is `NULL`, must be used in conjonction with `on.behalf.of.content.owner.channel.channel`
+* `on.behalf.of.content.owner.channel` This parameter can only be used in a properly authorized request. Note: This parameter is intended exclusively for YouTube content partners.Specifies the YouTube channel ID of the channel to which a video is being added. This parameter is required when a request specifies a value for the `on.behalf.of.content.owner` parameter, and it can only be used in conjunction with that parameter. In addition, the request must be authorized using a CMS account that is linked to the content owner that the `on.behalf.of.content.owner` parameter specifies. Finally, the channel that the `on.behalf.of.content.owner.channel` parameter value specifies must be linked to the content owner that the `on.behalf.of.content.owner` parameter specifies.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+                  
+# search channels
+search <- searchTube(token, query = "cats", type = "channel")
+
+# pick random channel
+set.seed(19880525)
+chan <- sample(search$snippet.id.channelId, 1)
+
+# fetch subs
+subs <- getSubscriptions(token, channel.id = chan)
+```
+
+# getVideoCategories
+
+Returns a list of categories that can be associated with YouTube videos.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `id` Specifies a comma-separated list of video category IDs for the resources that you are retrieving.
+* `region.code` Instructs the API to return the list of video categories available in the specified country. The parameter value is an [ISO 3166-1 alpha-2](https://www.iso.org/obp/ui/#search) country code.
+* `hl` Specifies the language that should be used for text values in the API response. The default value is `en_US`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# get categories
+video.cat <- getVideoCategories(token, region.code = "US")
+```
+
+# getVideos
+
+Returns a list of videos that match the API request parameters.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `part` The part parameter specifies a comma-separated list of one or more activityresource properties that the API response will include. The default value is `snippet`, see `findParts` function for all valid values.
+* `n` Number of results to fecth. The default value is `50`.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `chart` The chart parameter identifies the chart that you want to retrieve. Only valid value is `mostPopular` or `NULL`. The default value if `mostPopular`.
+* `id` Specifies a comma-separated list of the YouTube video ID(s) for the resource(s) that are being retrieved. In a video resource, the id property specifies the video's ID.
+* `on.behalf.of.content.owner` This parameter can only be used in a properlyauthorized request. Note: This parameter is intended exclusively for YouTube content partners. Indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The CMS account that the user authenticates with must be linked to the specified YouTube content owner.
+* `video.category.id` Identifies the video category for which the chart should be retrieved. This parameter can only be used in conjunction with the chart parameter. By default, charts are not restricted to a particular category. The default value is `0`.
+* `region.code` Instructs the API to select a video chart available in the specified region. This parameter can only be used in conjunction with the chart parameter. The parameter value is an ISO 3166-1 alpha-2 country code.
+* `my.rating` This parameter can only be used in a properly authorized request. Set this parameter's value to `like` or `dislike` to instruct the API to only return videos liked or disliked by the authenticated user.
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+* `hl` Specifies the language that will be used for text values in the API response. The default value (from YouTube) is `NULL`. See `getLanguages` function. If localized resource details are available in that language, the resource's `snippet` (`part = "snippet"`).
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# get videos
+videos <- getVideos(token)
+```
+
+# searchTube
+
+Search YouTube for videos, channels and/or playlists.
+
+## Arguments
+
+* `token` Your token as returned by `youOAuth` function.
+* `query` The query term to search for. Your request can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that are associated with one of several search terms. For example, to search for videos matching either "boating" or "sailing", set the query parameter value to `boating|sailing`. Similarly, to search for videos matching either "boating" or "sailing" but not "fishing", set the query parameter value to `boating|sailing -fishing`.
+* `n` Number of results to fecth. The default value is `50`.
+* `type` Restricts a search query to only retrieve a particular type of resource. The value is a comma-separated list of resource types. The default value is `any` (includes `channel`, `video` and `playlist`).
+* `order` Specifies the method that will be used to order resources in the API response. The default value is `relevance`. See `findParams` function for valid values.
+* `video.dimension` Restricts a search to only retrieve 2D or 3D videos. The default value is `any`. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`. See `findParams` function for valid values.
+* `video.caption` Indicates whether the API should filter video search results based on whether they have captions. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `video.category.id` Filters video search results based on their category ID as returned by `getVideoCategories` function.
+* `video.duration` Filters video search results based on their duration. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `video.embeddable` Restricts a search to only videos that can be embedded into a webpage. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `video.syndicated` Restricts a search to only videos that can be played outside youtube.com. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `video.type` Restricts a search to a particular type of videos. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `video.definition` Restricts a search to only include either high definition (HD) or standard definition (SD) videos. HD videos are available for playback in at least 720p, though higher resolutions, like 1080p, might also be available. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `video.license` Filters search results to only include videos with a particular license. YouTube lets video uploaders choose to attach either the Creative Commons license or the standard YouTube license to each of their videos. The default value is `any`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
+* `location` Must be used in conjunction with the locationRadius parameter, defines a circular geographic area and also restricts a search to videos that specify, in their metadata, a geographic location that falls within that area. The parameter value is a vector that specifies latitude and longitude coordinates e.g. `c(lat = 37.42307, long = -122.08427)` or `c(37.42307, -122.08427)`. The default value is `NULL`.
+* `location.radius` Must be used in conjunction with the location parameter, defines a circular geographic area. The parameter value must be a floating point number followed by a measurement unit. Valid measurement units are `m`, `km`, `ft`, and `mi`. For example, valid parameter values include `1500m`, `5km`, `10000ft`, and `0.75mi`. The API does NOT support parameter values larger than 1000 kilometers. The default value is `NULL`.
+* `region.code` Instructs the API to return search results for the specified country. The parameter value is an [ISO 3166-1 alpha-2](http://www.iso.org/iso/country_codes/iso_3166_code_lists/country_names_and_code_elements.htm) country code. The default value is `NULL`.
+* `safe.search` Indicates whether the search results should include restricted content as well as standard content. The default value is `none`. See `findParams` function for valid values.
+* `event.type` Restricts a search to broadcast events. The default value is `NULL`. See `findParams` function for valid values. If you specify a value for this parameter, you must also set the `type` parameter's value to `video`.
+* `published.before` Indicates that the API response should only contain resources created before the specified time. Can be either of class `Date` ("%Y-%m-%d") or `POSIXct` or `POSIXlt` with time, or an RFC 3339 formatted date-time value (i.e.: `1970-01-01T00:00:00Z`). The default value is `Sys.time()`.
+* `published.after` Indicates that the API response should only contain resources created after the specified time. Can be either of class `Date` ("%Y-%m-%d") or `POSIXct` or `POSIXlt` with time, or an RFC 3339 formatted date-time value (i.e.: `1970-01-01T00:00:00Z`). The default value is `NULL`.
+* `channel.id` Indicates that the API response should only contain resources created by the channel. 
+* `relevance.language` Instructs the API to return search results that are most relevant to the specified language. The parameter value is typically an [ISO 639-1](http://www.loc.gov/standards/iso639-2/php/code_list.php) two-letter language code. However, you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese. Please note that results in other languages will still be returned if they are highly relevant to the search query term.
+* `topic.id` Indicates that the API response should only contain resources associated with the specified topic. The value identifies a [Freebase topic ID](https://developers.google.com/freebase/v1/topic-overview).
+* `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
+
+## Details
+
+For more information on the parameters and the API call this function refers to please see [https://developers.google.com/youtube/v3/docs/search/list](https://developers.google.com/youtube/v3/docs/search/list). Some parameters are only applicable to `type=video` namely that which 
+are preceded by `video.` and `event.type`.
+
+## Examples
+
+```R
+# Authenticate
+token <- youOAuth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+
+# search
+cats <- searchVideos(token, query = "cats")
+
+# filter 2d videos
+2d.cats <- searchVideos(token, query = "cats", 
+                        video.dimension = findParams("video.dimension")[1],
+                        type = "video")
+                        
+# find valid values for video.dimension
+dims <- findParams(param = "video.dimension")
+
+# fetch 3D cats videos from Belgium
+dull.cats <- searchVideos(token, query = "cats", region.code = "BE",
+                          video.dimension = dims[2], type = "video")
+                          
+# fetch "clean cat" channels from area 51 using coordinates
+safety <- findParams("safe.search")[grep("strict", 
+                                         findParams("safe.search"))]
+                                         
+clean.cats <- searchVideos(token, query = "clean cats", safe.search = safety,
+                           location = c(lat = 37.2350, long = 115.8111),
+                           location.radius = "5km", type = "channel")
+                           
+# fetch video catgeories
+video.cat <- getVideoCategories(token, region.code = "US")
+
+# filter pet-related video categories
+video.cat <- video.cat[grep("Pets", video.cat$snippet.title),] 
+
+# fetch by category
+pets <- searchTube(token, query = "cats", video.category.id = video.cat[1])
+```
+
+# youOAuth
+
+OAuth 2.0 authentication.
+
+## Arguments
+
+* `client.id `Your `client.id`. See details below.
+* `client.secret` Your `client.secret`. See details below.
+* `scope` Scope of token, defaults to `NULL`. See details below.
+
+## Details
+
+To get your client.id and client.secret please follow the instructions [here](https://developers.google.com/youtube/registering_an_application), you may also want to watch the [video](https://www.youtube.com/watch?v=Im69kzhpR3I)
+Also set the redirect Authorized redirect URIs to your localhost.
+
+Scopes:
+
+* `force-ssl` Manage your YouTube account. This scope requires communication with the API server to happen over an SSL connection.
+* `NULL` Manage your YouTube account. This scope is functionally identical to the youtube.force-ssl scope listed above because the YouTube API server is only available via an HTTPS endpoint. As a result, even though this scope does not require an SSL connection, there is actually no other way to make an API request.
+* `readonly` View your YouTube account.
+* `upload` Upload YouTube videos and manage your YouTube videos.
+* `partner-channel-audit` Retrieve the [auditDetails](https://developers.google.com/youtube/v3/docs/channels#auditDetails) part in a channel resource.
+
+See all scopes from documentation [here](https://developers.google.com/youtube/v3/guides/auth/installed-apps)
+
+## Examples
+
+```R
+token <- youOauth(client.id = "something.apps.googleusercontent.com",
+                  client.secret = "XxxXX1XxXxXxxx1xxx1xxXXX")
+```
