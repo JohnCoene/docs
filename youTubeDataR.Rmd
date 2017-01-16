@@ -147,7 +147,7 @@ search <- searchTube(token, query = "cats", type = "channel")
 
 # pick random channel id
 set.seed(19880525)
-chan <- sample(search$snippet.id.channelId, 1)
+chan <- sample(search$id.channelId, 1)
 
 # fetch data
 act <- getActivities(token, channel.id = chan)
@@ -183,7 +183,7 @@ search <- searchTube(token, query = "cats", type = "video")
 
 # random channel id
 set.seed(19880525)
-vid <- sample(search$snippet.id.videoId, 1)
+vid <- sample(search$id.videoId, 1)
 
 # fetch data
 act <- getActivities(token, video.id = vid)
@@ -230,7 +230,7 @@ search <- searchTube(token, query = "cats", type = "channel")
 
 # pick random id
 set.seed(19880525)
-chan <- sample(search$snippet.id.channelId, 1)
+chan <- sample(search$id.channelId, 1)
 
 # fetch
 chan.dat <- getChannels(token, id = chan)
@@ -268,7 +268,7 @@ search <- searchTube(token, query = "cats", type = "channel")
 
 # get channel sections
 sections <- getChannelSections(token, 
-                               channel.id = search$snippet.channelId [1])
+                               channel.id = search$channelId [1])
 ```
 
 # getComments
@@ -372,7 +372,7 @@ search <- searchTube(token, query = "cats", type = "channel")
 
 # pick random channel
 set.seed(19880525)
-chan <- sample(search$snippet.id.channelId, 1)
+chan <- sample(search$id.channelId, 1)
 
 # fetch playlist
 pl <- getPlaylists(token, channel.id = chan)
@@ -464,7 +464,7 @@ search <- searchTube(token, query = "cats", type = "channel")
 
 # pick random channel
 set.seed(19880525)
-chan <- sample(search$snippet.id.channelId, 1)
+chan <- sample(search$id.channelId, 1)
 
 # fetch subs
 subs <- getSubscriptions(token, channel.id = chan)
@@ -594,7 +594,7 @@ clean.cats <- searchVideos(token, query = "clean cats", safe.search = safety,
 video.cat <- getVideoCategories(token, region.code = "US")
 
 # filter pet-related video categories
-video.cat <- video.cat[grep("Pets", video.cat$snippet.title),] 
+video.cat <- video.cat[grep("Pets", video.cat$title),] 
 
 # fetch by category
 pets <- searchTube(token, query = "cats", video.category.id = video.cat[1])
