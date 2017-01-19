@@ -552,7 +552,7 @@ Search YouTube for videos, channels and/or playlists.
 * `published.after` Indicates that the API response should only contain resources created after the specified time. Can be either of class `Date` ("%Y-%m-%d") or `POSIXct` or `POSIXlt` with time, or an RFC 3339 formatted date-time value (i.e.: `1970-01-01T00:00:00Z`). The default value is `NULL`.
 * `channel.id` Indicates that the API response should only contain resources created by the channel. 
 * `relevance.language` Instructs the API to return search results that are most relevant to the specified language. The parameter value is typically an [ISO 639-1](http://www.loc.gov/standards/iso639-2/php/code_list.php) two-letter language code. However, you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese. Please note that results in other languages will still be returned if they are highly relevant to the search query term.
-* `topic.id` Indicates that the API response should only contain resources associated with the specified topic. The value identifies a [Freebase topic ID](https://developers.google.com/freebase/v1/topic-overview).
+* `topic.id` Indicates that the API response should only contain resources associated with the specified topic. The value identifies a [Freebase topic ID](https://developers.google.com/youtube/v3/docs/search/list).
 * `verbose` If `TRUE` prints infromational messages in the console. The default value is `FALSE`.
 
 ## Details
