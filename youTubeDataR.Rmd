@@ -6,7 +6,6 @@ output:
     highlight: kate
 ---
 
-
 ```{r knitr_init, echo=FALSE, cache=FALSE, warning=FALSE}
 library(knitr)
 library(rmdformats)
@@ -194,6 +193,7 @@ act <- getActivities(token, video.id = vid)
 Returns a collection of zero or more channel resources that match the request criteria.
 
 ## Arguments
+
 * `token` Your token as returned by `youOAuth` function.
 * `n` Number of results to fecth. The default value is `50`.
 * `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, see `findParts` function or 
@@ -277,7 +277,7 @@ Returns a list of comments that match the API request parameters.
 
 ## Arguments
 
-* `token Your token as returned by `youOAuth`.
+* `token` Your token as returned by `youOAuth`.
 * `part` The part parameter specifies a comma-separated list of one or more activity resource properties that the API response will include. The default value is `snippet`, can take any of `snippet` or `id`. See `findParts` function.
 * `n` Number of results to fecth. The default value is `50`.
 * `max.results` Specifies the maximum number of results that should be returned by each API call. Acceptable values are `0` to `50`, inclusive. The default value is `50`.
