@@ -1,0 +1,45 @@
+---
+title: "typed"
+author: "John Coene"
+date: "13 February 2017"
+output:
+  html_document:
+  theme: flatly
+  highlight: tango
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(typed)
+```
+
+```{r}
+typed(c("<h1 style ='color: #DD1C1A;'>typed.js in R<h1>",
+        "<h1>Use it in Rmarkdown!</h1>"), contentType = "html")
+```
+
+# Examples
+
+### Basic
+
+```{r}
+typed("Hellow")
+```
+
+### Multiple sentences
+
+```{r}
+typed(c("First sentence.", "Secoond sentence."))
+```
+
+### Type speed
+
+```{r}
+typed(c("Type faster with typeSpeed"), typeSpeed = 5)
+```
+
+### Use markup
+
+```{r}
+typed("Emphasis word <span style ='color: red;'>with html</span>.", contentType = "html")
+```

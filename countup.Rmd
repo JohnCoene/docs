@@ -1,0 +1,45 @@
+---
+title: "countup"
+author: "John Coene"
+date: "13 February 2017"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(countup)
+```
+
+# Examples
+
+## Basic
+
+`<p> countup(18523)</p>`
+
+<p>`r countup(18523)`</p>
+
+<hr>
+
+`<h1 style='color: red;'> countup(5672)</h1>`
+
+<h1 style='color: #DD1C1A;'>`r countup(1753952, duration = 10)`</h1>
+
+## Options
+
+```{r}
+opts = list(
+  useEasing = TRUE, 
+  useGrouping = TRUE, 
+  separator = ',', 
+  decimal = '.', 
+  prefix = 'US$', 
+  suffix = ' bejillion' 
+)
+
+countup(count = 1729, start = 10, duration = 10, options = opts)
+```
+
+<hr>
